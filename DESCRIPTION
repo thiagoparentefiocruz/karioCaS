@@ -1,0 +1,36 @@
+Package: CarioKaS
+Title: Confidence Kraken Scores for Reliable Domain-Specific Microbiota Inference and Discovery
+Version: 0.1.0
+Authors@R: 
+    person("Thiago", "Parente", , "my_name [.] my_surname [@] fiocruz.br", role = c("aut", "cre"),
+           comment = c(ORCID = "orcid.org/0000-0001-7501-726X"))
+Description: Provides a comprehensive framework for analyzing Kraken2 metagenomic 
+    classification using multiple confidence scores. CarioKaS implements a 
+    robust comparative approach to evaluate taxonomic stability across different 
+    stringency levels, facilitating the identification of reliable microbiota 
+    components and the discovery of potentially novel or unrepresented species. 
+    A key innovation is its domain-specific analysis, separately processing 
+    Bacteria, Archaea, Eukaryota, and Viruses to ensure balanced visibility 
+    of all biological domains. Includes high-quality visualization tools for 
+    retention rates, shared taxa (Upset plots), and stability heatmaps.
+License: GPL (>= 3)
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.3.3
+Imports: 
+    ggplot2,
+    patchwork,
+    cowplot,
+    UpSetR,
+    reshape2,
+    dplyr,
+    magrittr,
+    readr,
+    stringr,
+    tidyr,
+    purrr,
+    scales
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
