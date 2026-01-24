@@ -1,6 +1,6 @@
 #' Generate UpSet Plots per Sample/Domain/Level (Step 002)
 #'
-#' "CarioKas never are upset!"
+#' "karioCaS never are upset!"
 #' This function processes the unified matrix and generates UpSet plots to visualize
 #' intersections between Confidence Scores (CS).
 #'
@@ -18,7 +18,7 @@
 #' @importFrom grid grid.text gpar
 #' @importFrom grDevices pdf dev.off
 
-upset_CarioKaS_never_are <- function(project_dir,
+upset_karioCaS_never_are <- function(project_dir,
                                      import_script_path = NULL) {
 
   # ==============================================================================
@@ -49,7 +49,7 @@ upset_CarioKaS_never_are <- function(project_dir,
   }, add = TRUE)
 
   cat("====================================================\n")
-  cat("LOG: 002_UPSET_PLOTS_GENERATION (CarioKas never are upset)\n")
+  cat("LOG: 002_UPSET_PLOTS_GENERATION (karioCaS never are upset)\n")
   cat("DATE/TIME:", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "\n")
   cat("PROJECT DIR:", project_dir, "\n")
   cat("====================================================\n\n")

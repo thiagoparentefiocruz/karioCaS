@@ -1,11 +1,11 @@
-# CarioKaS 🧬
+# karioCaS 🧬
 
-**Confidence Kraken Scores for Reliable Domain-Specific Microbiota
+**Kraken Confidence Scores for Reliable Domain-Specific Microbiota
 Inference and Discovery**
 
-**CarioKaS** is an R package designed to enhance the reliability and
+**karioCaS** is an R package designed to enhance the reliability and
 clarity of metagenomic data analysis originating from Kraken2.
-**CarioKaS** offers two distinct approaches to deep-diving into
+**karioCaS** offers two distinct approaches to deep-diving into
 metagenomic data:
 
 **1. Domain-Specific Analysis:** Based on the principle that "one size
@@ -17,13 +17,13 @@ Viruses**).
 underutilized Kraken parameter—the **Confidence Score (CS)**.
 
 The comparative analysis of taxa retention across different ranks is
-astonishingly informative. With **CarioKaS**, users can identify
+astonishingly informative. With **karioCaS**, users can identify
 Confidence Scores unique to each Domain and appropriate to the project
 goals, finding the fine balance between false positives and false
 negatives. True-positive calling strength can be further increased by
 setting a minimal read threshold for each Domain and taxonomic rank.
 
-Ultimately, **CarioKaS** provides a chimeric `.mpa` file listing all
+Ultimately, **karioCaS** provides a chimeric `.mpa` file listing all
 taxa ranks confidently detected in a sample, providing a robust
 framework to evaluate taxonomic stability across multiple stringency
 levels.
@@ -34,7 +34,7 @@ Since this is currently a private repository, install it using a
 Personal Access Token (PAT):
 
 r install.packages("devtools")
-devtools::install_github("thiagoparentefiocruz/CarioKaS", auth_token =
+devtools::install_github("thiagoparentefiocruz/karioCaS", auth_token =
 "YOUR_PERSONAL_ACCESS_TOKEN")
 
 **Strict Folder Architecture**
@@ -77,10 +77,10 @@ different scores.
 
 3.  Advanced Visualization
 
-**heatmaps_CarioKaS()**: Detailed abundance heatmaps with built-in
+**heatmaps_karioCaS()**: Detailed abundance heatmaps with built-in
 support for confidence clustering.
 
-**upset_CarioKaS_never_are()**: Identifies "transient" vs. "persistent"
+**upset_karioCaS_never_are()**: Identifies "transient" vs. "persistent"
 taxa using UpSet plots.
 
 **reads_per_taxa()**: Visualizes read distribution efficiency across
@@ -96,7 +96,7 @@ downstream analysis.
 
 ***Quick Example***
 
-library(CarioKaS)
+library(karioCaS)
 
 **1. Import MPA (Metaphlan-style) data from Kraken2**
 
@@ -120,4 +120,4 @@ Identify the lowest common ancestor (LCA) stability
 
 Compare abundances across samples and confidence levels
 
-`heatmaps_CarioKaS(my_data)`
+`heatmaps_karioCaS(my_data)`

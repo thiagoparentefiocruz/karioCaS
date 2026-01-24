@@ -20,7 +20,7 @@
 #' @importFrom tidyselect any_of
 #' @importFrom stats setNames
 
-heatmaps_CarioKaS <- function(project_dir,
+heatmaps_karioCaS <- function(project_dir,
                                         import_script_path = NULL,
                                         confidence_score = NULL,
                                         top_n = NULL) {
