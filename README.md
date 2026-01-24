@@ -1,9 +1,3 @@
----
-editor_options: 
-  markdown: 
-    wrap: 72
----
-
 # CarioKaS 🧬
 
 **Confidence Kraken Scores for Reliable Domain-Specific Microbiota
@@ -50,10 +44,10 @@ function correctly.
 
 YOUR_BASE_DIR/000_mpa_original/ SAMPLE_CSXX/\
 \
-Folder name rules: \
-1. SAMPLE: Any name (DO NOT use underscores "\_") \
+Folder name rules:\
+1. SAMPLE: Any name (DO NOT use underscores "\_")\
 \
-2. \_CS: **Must** be present \
+2. \_CS: **Must** be present\
 \
 3. XX: The Confidence Score (e.g., 01 for 0.1, 09 for 0.9)
 
