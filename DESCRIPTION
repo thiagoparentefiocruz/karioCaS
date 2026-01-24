@@ -2,7 +2,7 @@ Package: CarioKaS
 Title: Confidence Kraken Scores for Reliable Domain-Specific Microbiota Inference and Discovery
 Version: 0.1.0
 Authors@R: 
-    person("Thiago", "Parente", , "my_name [.] my_surname [@] fiocruz.br", role = c("aut", "cre"),
+    person("Thiago", "Parente", , email = "thiago.parente@fiocruz.br", role = c("aut", "cre"),
            comment = c(ORCID = "orcid.org/0000-0001-7501-726X"))
 Description: Provides a comprehensive framework for analyzing Kraken2 metagenomic 
     classification using multiple confidence scores. CarioKaS implements a 
