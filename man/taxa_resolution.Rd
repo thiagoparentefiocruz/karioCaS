@@ -12,17 +12,14 @@ taxa_resolution(
 )
 }
 \arguments{
-\item{project_dir}{Path to the project root (e.g., "/Users/name/project_x").}
+\item{project_dir}{Path to the project root.}
 
-\item{analysis_level}{The taxonomic level to analyze as the "Child".
-Options: "Species" (default, compares to Genus) or "Genus" (compares to Family).}
+\item{analysis_level}{"Species" (default) or "Genus".}
 
-\item{import_script_path}{Deprecated. The package uses internal functions.}
+\item{import_script_path}{Deprecated.}
 
-\item{max_bars}{Integer. Maximum number of taxa to show per plot (Default: 10).}
+\item{max_bars}{Max taxa per plot.}
 }
 \description{
-Generates publication-quality (Nature-style) stacked bar plots showing the
-proportion of reads assigned to a child level (e.g., Species) vs. the
-exclusive reads of its parent level (e.g., Genus).
+Generates stacked bar plots showing child vs parent level reads.
 }

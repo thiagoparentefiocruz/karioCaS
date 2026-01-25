@@ -12,18 +12,14 @@ heatmaps_karioCaS(
 )
 }
 \arguments{
-\item{project_dir}{Path to the project root (e.g., "/Users/name/project_x").}
+\item{project_dir}{Path to the project root.}
 
-\item{import_script_path}{Deprecated. The package uses internal functions for import.}
+\item{import_script_path}{Deprecated.}
 
-\item{confidence_score}{Numeric threshold (0 to 1). If NULL, auto-detected from the last column.}
+\item{confidence_score}{Numeric threshold (0 to 1).}
 
-\item{top_n}{Integer. Number of top taxa to display. If NULL, defaults to 20.}
-}
-\value{
-Returns TRUE invisibly if successful. Generates PDFs in "005_taxonomic_heatmaps_CS...".
+\item{top_n}{Integer. Number of top taxa to display.}
 }
 \description{
-This function processes the unified matrix, handles missing inputs by triggering
-the internal import step (Step 000) if necessary, and generates detailed heatmaps.
+Generates detailed heatmaps using karioCaS styles.
 }

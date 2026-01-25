@@ -7,15 +7,10 @@
 taxa_retention(project_dir, import_script_path = NULL)
 }
 \arguments{
-\item{project_dir}{Root path of the project (e.g., "/Users/name/project_x").}
+\item{project_dir}{Root path of the project.}
 
-\item{import_script_path}{Deprecated/Ignored in package version. The import function is now internal.}
-}
-\value{
-Generates PDF files in "001_cs_retention" and returns invisible NULL.
+\item{import_script_path}{Deprecated.}
 }
 \description{
 Executes read retention analysis based on Confidence Score (Kraken/Bracken).
-This function expects the standard folder structure created by step 000.
-It generates 7 PDFs per sample (1 "All Levels" + 6 Taxonomic Levels).
 }

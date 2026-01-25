@@ -7,15 +7,10 @@
 upset_karioCaS_never_are(project_dir, import_script_path = NULL)
 }
 \arguments{
-\item{project_dir}{Path to the project root (e.g., "/Users/name/project_x").}
+\item{project_dir}{Path to the project root.}
 
-\item{import_script_path}{Deprecated. The import function is now internal to the package.}
-}
-\value{
-Returns TRUE invisibly if successful. Generates PDFs in "002_UpSetComparison_Plots".
+\item{import_script_path}{Deprecated.}
 }
 \description{
 "karioCaS never are upset!"
-This function processes the unified matrix and generates UpSet plots to visualize
-intersections between Confidence Scores (CS).
 }

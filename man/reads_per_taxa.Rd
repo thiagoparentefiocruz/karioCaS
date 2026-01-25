@@ -12,15 +12,14 @@ reads_per_taxa(
 )
 }
 \arguments{
-\item{project_dir}{Path to the project root (e.g., "/Users/name/project_x").}
+\item{project_dir}{Path to the project root.}
 
-\item{analysis_level}{Taxonomic level to analyze (e.g., "Species", "Genus"). Default: "Species".}
+\item{analysis_level}{Taxonomic level to analyze. Default: "Species".}
 
-\item{cutoff_mode}{Analysis mode: "Extinction", "Stabilization", or "Both" (Default).}
+\item{cutoff_mode}{Analysis mode: "Extinction", "Stabilization", or "Both".}
 
-\item{import_script_path}{Deprecated. The package uses internal functions for import.}
+\item{import_script_path}{Deprecated.}
 }
 \description{
-Generates publication-quality saturation curves showing the retention of reads
-and taxa across increasing read count cutoffs.
+Generates publication-quality saturation curves.
 }
