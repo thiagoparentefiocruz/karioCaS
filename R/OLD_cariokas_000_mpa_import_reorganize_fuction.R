@@ -15,7 +15,7 @@
 #' @importFrom stringr str_remove str_extract str_sub
 #' @importFrom purrr map_dfr set_names
 
-import_mpa_data <- function(project_dir, log_filename = "log_000_data_import.txt") {
+import_mpa_data_old <- function(project_dir, log_filename = "log_000_data_import.txt") {
 
   # ==============================================================================
   # 1. DEFINE PATHS BASED ON CONVENTION
