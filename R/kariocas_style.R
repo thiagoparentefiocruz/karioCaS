@@ -6,6 +6,7 @@
 #' @export
 #' @importFrom ggplot2 theme_classic theme element_text element_blank element_line element_rect margin unit guide_legend ggplot annotate labs scale_y_continuous scale_x_continuous expansion
 #' @importFrom scales label_number cut_short_scale log_trans
+#' @importFrom ggtext element_markdown
 kariocas_colors <- list(
   ranks = c(
     "Phylum"  = "#000000", "Class"   = "#E69F00", "Order"   = "#56B4E9",
@@ -27,7 +28,8 @@ kariocas_colors <- list(
 #' @export
 kariocas_shapes <- c(
   "Phylum" = 15, "Class" = 16, "Order" = 17,
-  "Family" = 18, "Genus" = 25, "Species" = 8
+  "Family" = 18, "Genus" = 25, "Species" = 8,
+  "Total Reads" = 15, "Level Reads" = 17, "Level Taxa" = 16
 )
 
 #' Official karioCaS Line Types
@@ -40,26 +42,26 @@ kariocas_linetypes <- c(
 # 2. FORMATTERS & LABELS
 # ==============================================================================
 
-#' Format numbers with K/M suffixes (e.g., 10000 -> 10K)
+#' Format numbers with K/M suffixes
 #' @export
 label_k_number <- function(x) {
   scales::label_number(scale_cut = scales::cut_short_scale())(x)
 }
 
 #' Smart Number Formatter for Logs
-#' Displays integers as integers (100) and small fractions with decimals (0.01).
+#' Default uses comma for thousands to avoid conflict with decimal dot.
 #' @export
 label_kariocas_auto <- function(x) {
-  format(x, scientific = FALSE, big.mark = ".", drop0trailing = TRUE)
+  format(x, scientific = FALSE, big.mark = ",", drop0trailing = TRUE)
 }
 
-#' Standard Axis Labels with Mathematical Notation
-#' Uses atop() for line breaks in expressions.
+#' Standard Axis Labels with HTML/Markdown Styling
+#' Uses ggtext syntax for mixing fonts and sizes.
 #' @export
 kariocas_labels <- list(
-  y_log10_retained = expression(atop("% Retained", paste("(axis scaled to ", log[10], ")"))),
-  x_log10_reads    = expression(atop("Reads", paste("(axis scaled to ", log[10], ")"))),
-  y_confidence     = "Confidence Score (%)"
+  y_log10_retained = "**% Retained**<br><span style='font-size:8pt;color:grey40'>(axis scaled to log<sub>10</sub>)</span>",
+  x_log10_reads    = "**Reads**<br><span style='font-size:8pt;color:grey40'>(axis scaled to log<sub>10</sub>)</span>",
+  y_confidence     = "**Confidence Score (%)**"
 )
 
 # ==============================================================================
@@ -67,12 +69,15 @@ kariocas_labels <- list(
 # ==============================================================================
 
 #' Log10 Scale with Smart Integer Formatting
-#' @param ... Arguments passed to scale_y_continuous
+#' NOW FLEXIBLE: Accepts a 'labels' argument to override the default.
+#'
+#' @param labels A formatting function or vector. Defaults to label_kariocas_auto.
+#' @param ... Other arguments passed to scale_y_continuous
 #' @export
-scale_y_kariocas_log10 <- function(...) {
+scale_y_kariocas_log10 <- function(labels = label_kariocas_auto, ...) {
   ggplot2::scale_y_continuous(
     trans = "log10",
-    labels = label_kariocas_auto,
+    labels = labels,
     breaks = c(0.01, 0.1, 1, 10, 100),
     ...
   )
@@ -80,10 +85,10 @@ scale_y_kariocas_log10 <- function(...) {
 
 #' @rdname scale_y_kariocas_log10
 #' @export
-scale_x_kariocas_log10 <- function(...) {
+scale_x_kariocas_log10 <- function(labels = label_kariocas_auto, ...) {
   ggplot2::scale_x_continuous(
     trans = "log10",
-    labels = label_kariocas_auto,
+    labels = labels,
     ...
   )
 }
@@ -129,19 +134,31 @@ theme_kariocas <- function(base_size = 12, base_family = "sans") {
   ggplot2::theme_classic(base_size = base_size, base_family = base_family) +
     ggplot2::theme(
       # Typography
-      plot.title = ggplot2::element_text(face = "bold", size = base_size + 4, hjust = 0.5, color = "black", margin = ggplot2::margin(b = 10)),
-      plot.subtitle = ggplot2::element_text(size = base_size - 2, hjust = 0.5, color = "grey30", margin = ggplot2::margin(b = 15)),
+      plot.title = ggplot2::element_text(
+        face = "bold", size = 14, hjust = 0.5, color = "black",
+        margin = ggplot2::margin(b = 5)
+      ),
+      plot.subtitle = ggplot2::element_text(
+        size = 10, hjust = 0.5, color = "grey30",
+        margin = ggplot2::margin(b = 10)
+      ),
 
-      # Axis
-      axis.title = ggplot2::element_text(face = "bold", size = base_size - 1, color = "black"),
-      axis.text = ggplot2::element_text(size = base_size - 2, color = "black"),
-      axis.title.y = ggplot2::element_text(margin = ggplot2::margin(r = 10)),
-      axis.title.x = ggplot2::element_text(margin = ggplot2::margin(t = 10)),
+      # Axis Titles (Compact Margins)
+      axis.title.y = ggtext::element_markdown(
+        hjust = 0.5, size = 11, color = "black", lineheight = 1.2,
+        margin = ggplot2::margin(r = 5)
+      ),
+      axis.title.x = ggtext::element_markdown(
+        hjust = 0.5, size = 11, color = "black", lineheight = 1.2,
+        margin = ggplot2::margin(t = 5)
+      ),
+
+      axis.text = ggplot2::element_text(size = 10, color = "black"),
 
       # Legend
       legend.position = "bottom",
       legend.title = ggplot2::element_blank(),
-      legend.text = ggplot2::element_text(size = base_size - 2),
+      legend.text = ggplot2::element_text(size = 10),
       legend.margin = ggplot2::margin(t = -5),
       legend.box = "horizontal",
 
@@ -152,9 +169,9 @@ theme_kariocas <- function(base_size = 12, base_family = "sans") {
 
       # Facets
       strip.background = ggplot2::element_rect(fill = "grey95", color = NA),
-      strip.text = ggplot2::element_text(face = "bold", size = base_size - 2, color = "black"),
+      strip.text = ggplot2::element_text(face = "bold", size = 10, color = "black"),
 
-      # Margins
+      # Plot Margins
       plot.margin = ggplot2::margin(10, 15, 10, 10)
     )
 }

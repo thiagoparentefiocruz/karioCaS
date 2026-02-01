@@ -2,10 +2,10 @@
 % Please edit documentation in R/kariocas_style.R
 \name{label_k_number}
 \alias{label_k_number}
-\title{Format numbers with K/M suffixes (e.g., 10000 -> 10K)}
+\title{Format numbers with K/M suffixes}
 \usage{
 label_k_number(x)
 }
 \description{
-Format numbers with K/M suffixes (e.g., 10000 -> 10K)
+Format numbers with K/M suffixes
 }

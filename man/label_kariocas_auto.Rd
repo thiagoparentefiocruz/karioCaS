@@ -3,11 +3,11 @@
 \name{label_kariocas_auto}
 \alias{label_kariocas_auto}
 \title{Smart Number Formatter for Logs
-Displays integers as integers (100) and small fractions with decimals (0.01).}
+Default uses comma for thousands to avoid conflict with decimal dot.}
 \usage{
 label_kariocas_auto(x)
 }
 \description{
 Smart Number Formatter for Logs
-Displays integers as integers (100) and small fractions with decimals (0.01).
+Default uses comma for thousands to avoid conflict with decimal dot.
 }

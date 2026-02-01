@@ -5,7 +5,7 @@
 \alias{kariocas_shapes}
 \title{Official karioCaS Shapes}
 \format{
-An object of class \code{numeric} of length 6.
+An object of class \code{numeric} of length 9.
 }
 \usage{
 kariocas_shapes

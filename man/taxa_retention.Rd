@@ -11,6 +11,4 @@ taxa_retention(project_dir)
 }
 \description{
 Executes read retention analysis based on Confidence Score (Kraken/Bracken).
-Calculates the percentage of reads and taxa retained at each CS level relative to the
-baseline (CS00). Generates publication-quality panels using karioCaS styles.
 }

@@ -3,8 +3,8 @@
 \docType{data}
 \name{kariocas_labels}
 \alias{kariocas_labels}
-\title{Standard Axis Labels with Mathematical Notation
-Uses atop() for line breaks in expressions.}
+\title{Standard Axis Labels with HTML/Markdown Styling
+Uses ggtext syntax for mixing fonts and sizes.}
 \format{
 An object of class \code{list} of length 3.
 }
@@ -12,7 +12,7 @@ An object of class \code{list} of length 3.
 kariocas_labels
 }
 \description{
-Standard Axis Labels with Mathematical Notation
-Uses atop() for line breaks in expressions.
+Standard Axis Labels with HTML/Markdown Styling
+Uses ggtext syntax for mixing fonts and sizes.
 }
 \keyword{datasets}

@@ -3,15 +3,19 @@
 \name{scale_y_kariocas_log10}
 \alias{scale_y_kariocas_log10}
 \alias{scale_x_kariocas_log10}
-\title{Log10 Scale with Smart Integer Formatting}
+\title{Log10 Scale with Smart Integer Formatting
+NOW FLEXIBLE: Accepts a 'labels' argument to override the default.}
 \usage{
-scale_y_kariocas_log10(...)
+scale_y_kariocas_log10(labels = label_kariocas_auto, ...)
 
-scale_x_kariocas_log10(...)
+scale_x_kariocas_log10(labels = label_kariocas_auto, ...)
 }
 \arguments{
-\item{...}{Arguments passed to scale_y_continuous}
+\item{labels}{A formatting function or vector. Defaults to label_kariocas_auto.}
+
+\item{...}{Other arguments passed to scale_y_continuous}
 }
 \description{
 Log10 Scale with Smart Integer Formatting
+NOW FLEXIBLE: Accepts a 'labels' argument to override the default.
 }

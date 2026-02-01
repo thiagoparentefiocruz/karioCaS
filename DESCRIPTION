@@ -29,7 +29,8 @@ Imports:
     stringr,
     tidyr,
     purrr,
-    scales
+    scales,
+    ggtext
 Suggests: 
     knitr,
     rmarkdown
