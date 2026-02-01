@@ -1,6 +1,6 @@
 Package: karioCaS
 Title: Kraken Confidence Scores for Reliable Domain-Specific Microbiota Inference and Discovery
-Version: 0.1.0.9000
+Version: 0.2.0
 Authors@R: 
     person("Thiago", "Parente", , email = "thiago.parente@fiocruz.br", role = c("aut", "cre"),
            comment = c(ORCID = "orcid.org/0000-0001-7501-726X"))
