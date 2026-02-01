@@ -4,17 +4,24 @@
 \alias{heatmaps_karioCaS}
 \title{Generate Heatmaps of Taxa Abundance with Extinction Patterns (Step 005)}
 \usage{
-heatmaps_karioCaS(project_dir, analysis_rank = "Class", top_n = 15)
+heatmaps_karioCaS(
+  project_dir,
+  analysis_rank = NULL,
+  confidence_score = NULL,
+  top_n = 20
+)
 }
 \arguments{
 \item{project_dir}{Path to the project root.}
 
-\item{analysis_rank}{Taxonomic rank to analyze (default: "Class").}
+\item{analysis_rank}{Taxonomic rank to analyze. If NULL, defaults to "Genus".}
 
-\item{top_n}{Number of specific taxa to display individually (default: 15).}
+\item{confidence_score}{Target CS to define "Survivors" (e.g., 90). If NULL, uses the highest available.}
+
+\item{top_n}{Number of top survivors to display individually (default: 20).}
 }
 \description{
-Creates Relative Abundance (%) heatmaps displaying the dominance of specific
-Top Taxa and the aggregated abundance of taxa lost at each filtering step.
-Uses a vertical faceted layout and a White-to-Terracotta palette.
+Creates Relative Abundance (%) heatmaps focused on survivors at a specific
+Confidence Score. "Elite" survivors are clustered by similarity, while lost taxa
+are aggregated into "Loss Groups" at the bottom.
 }
