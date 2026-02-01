@@ -11,4 +11,5 @@ taxa_retention(project_dir)
 }
 \description{
 Executes read retention analysis based on Confidence Score (Kraken/Bracken).
+Calculates retention relative to the baseline (CS00) for both Reads and Distinct Taxa count.
 }

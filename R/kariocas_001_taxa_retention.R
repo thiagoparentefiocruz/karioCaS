@@ -1,11 +1,11 @@
 #' Run Confidence Score Retention Analysis (Step 001)
 #'
 #' Executes read retention analysis based on Confidence Score (Kraken/Bracken).
+#' Calculates retention relative to the baseline (CS00) for both Reads and Distinct Taxa count.
 #'
 #' @param project_dir Root path of the project.
 #'
 #' @export
-#' @importFrom readr read_rds
 #' @importFrom dplyr filter select group_by summarise mutate left_join full_join n_distinct arrange pull case_when
 #' @importFrom tidyr replace_na pivot_longer
 #' @importFrom ggplot2 ggplot aes geom_line geom_point scale_color_manual scale_shape_manual scale_linetype_manual labs ggsave scale_x_continuous coord_cartesian guides guide_legend
@@ -18,244 +18,190 @@ taxa_retention <- function(project_dir) {
   # ==============================================================================
   # 1. SETUP & DIRECTORIES
   # ==============================================================================
-  input_dir  <- file.path(project_dir, "000_karioCaS_input_matrix")
-  output_dir <- file.path(project_dir, "001_cs_retention")
-
-  if (!dir.exists(input_dir)) {
-    stop("CRITICAL ERROR: Input directory not found: ", input_dir,
-         "\nPlease ensure step 000 (import) was run successfully.")
-  }
+  # Input logic is handled by .get_tidy_data helper
+  output_dir <- file.path(project_dir, "001_taxa_retention")
 
   if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-
-  rds_file <- file.path(input_dir, "karioCaS_input_matrix.rds")
-  if (!file.exists(rds_file)) stop("Input RDS file not found: ", rds_file)
 
   # ==============================================================================
   # 2. DATA LOADING
   # ==============================================================================
-  message(">>> Loading Tidy Data from: ", rds_file)
-  df_long <- readr::read_rds(rds_file)
+  message(">>> Loading Data (Auto-detected format)...")
+  df_long <- .get_tidy_data(project_dir)
 
+  # Define Ranks including Kingdom as requested
+  target_ranks <- c("Domain", "Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species")
+
+  # Clean and Prepare Data
+  # We simply filter for the valid ranks and ensure Rank is a Factor in correct order.
+  # Note: Taxon_Name already exists in df_long coming from .get_tidy_data!
   df_proc <- df_long %>%
-    dplyr::mutate(
-      Taxon_Name = dplyr::case_when(
-        Rank == "Domain"  ~ Domain,
-        Rank == "Kingdom" ~ Kingdom,
-        Rank == "Phylum"  ~ Phylum,
-        Rank == "Class"   ~ Class,
-        Rank == "Order"   ~ Order,
-        Rank == "Family"  ~ Family,
-        Rank == "Genus"   ~ Genus,
-        Rank == "Species" ~ Species,
-        TRUE ~ NA_character_
-      )
-    )
+    dplyr::filter(Rank %in% target_ranks) %>%
+    dplyr::mutate(Rank = factor(Rank, levels = target_ranks))
+
+  # Validation
+  if (nrow(df_proc) == 0) stop("No data found after filtering Ranks.")
 
   SAMPLES <- unique(df_proc$sample)
-  DOMAINS <- names(kariocas_colors$domains)
+  DOMAINS <- names(kariocas_colors$domains) # Uses package colors
 
-  rank_plural_map <- c("Phylum"="Phyla", "Class"="Classes", "Order"="Orders",
-                       "Family"="Families", "Genus"="Genera", "Species"="Species")
-
-  TARGET_RANKS <- c(NA, "Phylum", "Class", "Order", "Family", "Genus", "Species")
-
-  message(">>> Starting Retention Analysis for ", length(SAMPLES), " samples.")
+  message(">>> Starting Retention Analysis...")
 
   # ==============================================================================
-  # 3. CORE LOGIC LOOP
+  # 3. ANALYSIS LOOP
   # ==============================================================================
   for (samp in SAMPLES) {
     message("  Processing Sample: ", samp)
-    samp_out_dir <- file.path(output_dir, samp)
-    if (!dir.exists(samp_out_dir)) dir.create(samp_out_dir)
 
-    df_samp <- df_proc %>% dplyr::filter(sample == samp)
+    plot_list <- list()
 
-    # 3.1 CALCULATE BASELINES (CS == 0) ----------------------------------------
-    df_baseline_domain <- df_samp %>%
-      dplyr::filter(CS == 0, Rank == "Domain") %>%
-      dplyr::group_by(Domain) %>%
-      dplyr::summarise(Base_Domain_Reads = sum(Counts), .groups = "drop")
+    # 3.1 Calculate Statistics per Domain -> Rank -> CS
+    # We calculate Total Reads and Distinct Taxa Count
+    df_samp <- df_proc %>%
+      dplyr::filter(sample == samp)
 
-    df_baseline_ranks <- df_samp %>%
-      dplyr::filter(CS == 0) %>%
-      dplyr::group_by(Domain, Rank) %>%
-      dplyr::summarise(
-        Base_Rank_Reads = sum(Counts),
-        Base_Rank_Taxa  = dplyr::n_distinct(Taxon_Name[Counts > 0]),
-        .groups = "drop"
-      )
-
-    # 3.2 CALCULATE METRICS ----------------------------------------------------
+    # Pre-calculate totals
     df_stats <- df_samp %>%
-      dplyr::group_by(Domain, CS, Rank) %>%
+      dplyr::group_by(Domain, Rank, CS) %>%
       dplyr::summarise(
-        Curr_Reads = sum(Counts),
-        Curr_Taxa  = dplyr::n_distinct(Taxon_Name[Counts > 0]),
+        total_reads = sum(Counts),
+        n_taxa = dplyr::n_distinct(Taxon_Name),
         .groups = "drop"
-      ) %>%
-      dplyr::left_join(df_baseline_domain, by = "Domain") %>%
-      dplyr::left_join(df_baseline_ranks, by = c("Domain", "Rank")) %>%
-      dplyr::mutate(
-        Ret_Reads_Pct = (Curr_Reads / Base_Rank_Reads) * 100,
-        Ret_Taxa_Pct  = (Curr_Taxa / Base_Rank_Taxa) * 100
-      ) %>%
-      dplyr::mutate(
-        Ret_Reads_Pct = ifelse(is.nan(Ret_Reads_Pct) | Ret_Reads_Pct == 0, NA, Ret_Reads_Pct),
-        Ret_Taxa_Pct  = ifelse(is.nan(Ret_Taxa_Pct) | Ret_Taxa_Pct == 0, NA, Ret_Taxa_Pct)
       )
 
-    # Global Domain Trend (using Rank==Domain logic)
-    df_domain_trend <- df_samp %>%
-      dplyr::filter(Rank == "Domain") %>%
-      dplyr::group_by(Domain, CS) %>%
-      dplyr::summarise(Curr_Domain_Reads = sum(Counts), .groups="drop") %>%
-      dplyr::left_join(df_baseline_domain, by = "Domain") %>%
+    # 3.2 Calculate Retention % (Baseline = CS 00)
+    # Identify Baseline values (CS == 0)
+    df_baseline <- df_stats %>%
+      dplyr::filter(CS == 0) %>%
+      dplyr::rename(base_reads = total_reads, base_taxa = n_taxa) %>%
+      dplyr::select(Domain, Rank, base_reads, base_taxa)
+
+    # Join and Calculate %
+    df_plot_data <- df_stats %>%
+      dplyr::left_join(df_baseline, by = c("Domain", "Rank")) %>%
       dplyr::mutate(
-        Ret_Total_Reads_Trend = (Curr_Domain_Reads / Base_Domain_Reads) * 100,
-        Ret_Total_Reads_Trend = ifelse(Ret_Total_Reads_Trend == 0, NA, Ret_Total_Reads_Trend)
+        pct_reads = (total_reads / base_reads) * 100,
+        pct_taxa  = (n_taxa / base_taxa) * 100
       ) %>%
-      dplyr::select(Domain, CS, Ret_Total_Reads_Trend)
+      # Remove NaN/Inf if baseline was 0
+      dplyr::mutate(
+        pct_reads = ifelse(base_reads == 0, 0, pct_reads),
+        pct_taxa  = ifelse(base_taxa == 0, 0, pct_taxa)
+      )
 
-    # ==========================================================================
-    # 4. VISUALIZATION LOOP
-    # ==========================================================================
-    for (lvl in TARGET_RANKS) {
+    # 3.3 PLOTTING
+    # We generate plots for each Domain
+    for (dom in DOMAINS) {
 
+      df_dom <- df_plot_data %>% dplyr::filter(Domain == dom)
+
+      # Handle Empty Data
+      if (nrow(df_dom) == 0) {
+        # Create Empty Plot placeholder
+        p <- plot_kariocas_empty(
+          title_text = dom,
+          subtitle_text = "No data found",
+          x_label = kariocas_labels$y_confidence,
+          y_label = "Retention (%)"
+        )
+        plot_list[[dom]] <- p
+        next
+      }
+
+      # Prepare for plotting: Melt metrics (Reads vs Taxa) to use as Facets or Colors
+      # In the original script logic, we plot distinct lines for Ranks
+      # Let's pivot to have "Metric" (Reads vs Taxa)
+
+      # We create two plots per domain? Or combined?
+      # The user script had `mode_tag`. Let's stick to the visual style requested.
+      # The script seems to generate TWO files: one for Reads, one for Taxa.
+      # Let's Loop over Modes
+    } # End Domain Pre-Check
+
+    # Actually, the logic needs to generate the plot FOR ALL DOMAINS inside a loop of MODES
+    # to save separate PDFs like "CS_Retention_Reads.pdf" and "CS_Retention_Taxa.pdf"
+
+    modes <- c("reads", "taxa")
+
+    for (mode in modes) {
       plot_list <- list()
-      is_all_levels <- is.na(lvl)
-      mode_tag      <- if(is_all_levels) "All_Levels" else rank_plural_map[[lvl]]
 
       for (dom in DOMAINS) {
+        df_dom <- df_plot_data %>% dplyr::filter(Domain == dom)
 
-        # --- SUBTITLE STATS ---
-        base_dom_reads <- df_baseline_domain$Base_Domain_Reads[df_baseline_domain$Domain == dom]
-        if(length(base_dom_reads) == 0 || is.na(base_dom_reads)) base_dom_reads <- 0
-        reads_str <- label_kariocas_auto(base_dom_reads)
-
-        get_cnt <- function(r) {
-          val <- df_baseline_ranks$Base_Rank_Taxa[df_baseline_ranks$Domain == dom & df_baseline_ranks$Rank == r]
-          if(length(val) == 0) return(0) else return(val)
-        }
-
-        # Check for Data (using Domain trend as minimum requirement)
-        has_domain_data <- any(df_domain_trend$Domain == dom & !is.na(df_domain_trend$Ret_Total_Reads_Trend))
-
-        if (!has_domain_data || base_dom_reads == 0) {
-          plot_list[[dom]] <- plot_kariocas_empty(
-            title_text = dom,
-            subtitle_text = "No reads detected at CS00",
-            x_label = kariocas_labels$y_confidence,
-            y_label = kariocas_labels$y_log10_retained
-          )
+        if (nrow(df_dom) == 0) {
+          plot_list[[dom]] <- plot_kariocas_empty(dom, "No Data")
           next
         }
 
-        # --- PLOT CONSTRUCTION ---
-        if (is_all_levels) {
-          # ... (All Levels code remains same, it's safer) ...
-          subtitle_stats <- paste0(
-            "Reads: ", reads_str, " | P: ", get_cnt("Phylum"), " | C: ", get_cnt("Class"),
-            " | O: ", get_cnt("Order"), " | F: ", get_cnt("Family"),
-            " | G: ", get_cnt("Genus"), " | S: ", get_cnt("Species")
-          )
-
-          dat_plot <- df_stats %>%
-            dplyr::filter(Domain == dom, Rank %in% names(kariocas_colors$ranks))
-          dat_plot$Rank <- factor(dat_plot$Rank, levels = names(kariocas_colors$ranks))
-
-          p <- ggplot2::ggplot(dat_plot, ggplot2::aes(x = CS, y = Ret_Taxa_Pct, color = Rank, shape = Rank)) +
-            ggplot2::geom_line(linewidth = 0.8) +
-            ggplot2::geom_point(size = 2.5) +
-            ggplot2::scale_color_manual(values = kariocas_colors$ranks) +
-            ggplot2::scale_shape_manual(values = kariocas_shapes) +
-            ggplot2::guides(color = ggplot2::guide_legend(nrow = 1), shape = ggplot2::guide_legend(nrow = 1))
-
+        # Select Y variable based on mode
+        if (mode == "reads") {
+          df_dom$Y_Val <- df_dom$pct_reads
+          y_lab <- "Reads Retention (%)"
+          subtitle_stats <- "Sum of reads normalized by CS00"
         } else {
-          # >>> SPECIFIC RANK MODE WITH FIX <<<
-          curr_reads_base <- df_baseline_ranks$Base_Rank_Reads[df_baseline_ranks$Domain == dom & df_baseline_ranks$Rank == lvl]
-          curr_reads_str  <- label_kariocas_auto(curr_reads_base)
-
-          subtitle_stats <- paste0(
-            reads_str, " Total Reads; ", curr_reads_str, " assigned to ", lvl,
-            " | ", get_cnt(lvl), " ", mode_tag
-          )
-
-          # 1. Get Domain Trend (Backbone)
-          backbone <- df_domain_trend %>% dplyr::filter(Domain == dom)
-
-          # 2. Get Specific Level Stats
-          level_stats <- df_stats %>%
-            dplyr::filter(Domain == dom, Rank == lvl) %>%
-            dplyr::select(Domain, CS, Ret_Lvl_Reads = Ret_Reads_Pct, Ret_Lvl_Taxa = Ret_Taxa_Pct)
-
-          # 3. FULL JOIN (Logic Fix: Keep backbone even if level dies)
-          dat_lvl <- dplyr::full_join(backbone, level_stats, by = c("Domain", "CS")) %>%
-            dplyr::select(CS, Ret_Total_Reads_Trend, Ret_Lvl_Reads, Ret_Lvl_Taxa) %>%
-            tidyr::pivot_longer(cols = -CS, names_to = "Metric", values_to = "Pct")
-
-          # 4. Styling Mappings
-          dat_lvl <- dat_lvl %>%
-            dplyr::mutate(Metric_Key = dplyr::case_when(
-              Metric == "Ret_Lvl_Taxa" ~ "Level Taxa",
-              Metric == "Ret_Total_Reads_Trend" ~ "Total Reads",
-              Metric == "Ret_Lvl_Reads" ~ "Level Reads"
-            ))
-
-          dat_lvl$Metric_Key <- factor(dat_lvl$Metric_Key, levels = c("Level Taxa", "Total Reads", "Level Reads"))
-          legend_labels <- c(lvl, "Total Reads", paste(lvl, "Reads"))
-
-          p <- ggplot2::ggplot(dat_lvl, ggplot2::aes(x = CS, y = Pct, group = Metric_Key)) +
-            ggplot2::geom_line(ggplot2::aes(color = Metric_Key, linetype = Metric_Key), linewidth = 1) +
-            ggplot2::geom_point(ggplot2::aes(color = Metric_Key, shape = Metric_Key), size = 3) +
-
-            ggplot2::scale_color_manual(values = kariocas_colors$special, labels = legend_labels) +
-            ggplot2::scale_shape_manual(values = kariocas_shapes, labels = legend_labels) +
-            ggplot2::scale_linetype_manual(values = kariocas_linetypes, labels = legend_labels) +
-
-            ggplot2::guides(
-              color = ggplot2::guide_legend(nrow = 1, title = NULL),
-              shape = ggplot2::guide_legend(nrow = 1, title = NULL),
-              linetype = ggplot2::guide_legend(nrow = 1, title = NULL)
-            )
+          df_dom$Y_Val <- df_dom$pct_taxa
+          y_lab <- "Taxa Retention (%)"
+          subtitle_stats <- "Count of distinct taxa normalized by CS00"
         }
 
-        # --- COMMON STYLES ---
-        p <- p +
-          scale_y_kariocas_log10(limits = c(0.01, 105)) +
-          ggplot2::scale_x_continuous(breaks = seq(0, 100, 20), limits = c(0, 100)) +
+        # Plot Construction
+        # X axis = CS, Y axis = Retention %, Color = Rank
+        p <- ggplot2::ggplot(df_dom, ggplot2::aes(x = CS, y = Y_Val, color = Rank, group = Rank)) +
+          ggplot2::geom_line(linewidth = 1) +
+          ggplot2::geom_point(size = 2) +
+
+          # Colors
+          ggplot2::scale_color_manual(values = kariocas_colors$ranks) +
+
+          # Labels
           ggplot2::labs(
             title = dom,
             subtitle = subtitle_stats,
-            x = kariocas_labels$y_confidence,
-            y = kariocas_labels$y_log10_retained
+            x = "Kraken Confidence Score (%)",
+            y = y_lab,
+            color = "Rank"
           ) +
+
+          # Scale Y (Log10 hybrid or continuous?)
+          # Retention starts at 100%. Let's use standard log scale if needed,
+          # but usually retention plots are linear 0-100.
+          # The snippet used `scale_y_kariocas_log10`. Let's respect it but check ranges.
+          # Since it's percentage 0-100, standard linear is often better,
+          # but if it drops to 0.001%, log is better.
+          scale_y_kariocas_log10(limits = c(0.01, 105)) +
+
+          ggplot2::scale_x_continuous(breaks = seq(0, 100, 20), limits = c(0, 100)) +
+
           theme_kariocas() +
-          ggplot2::coord_cartesian(clip = "off")
+          ggplot2::theme(
+            legend.position = "bottom",
+            plot.subtitle = ggplot2::element_text(size = 9, color = "grey40")
+          )
 
         plot_list[[dom]] <- p
       }
 
-      # --- ASSEMBLE ---
+      # Assemble 4-panel
       final_layout <- (plot_list[["Bacteria"]] | plot_list[["Archaea"]]) /
         (plot_list[["Eukaryota"]] | plot_list[["Viruses"]]) +
         patchwork::plot_annotation(
-          title = paste(samp, "- CS Retention Analysis"),
-          subtitle = paste("Retention relative to Baseline (CS00) | Mode:", mode_tag),
+          title = paste(samp, "- Retention Analysis"),
+          subtitle = paste("Metric:", tools::toTitleCase(mode), "| Relative to Baseline (CS00)"),
           theme = ggplot2::theme(plot.title = ggplot2::element_text(face="bold", size=16, hjust=0.5))
         ) +
         patchwork::plot_layout(guides = "collect") &
         ggplot2::theme(legend.position = "bottom")
 
-      file_name <- paste0(samp, "_CS_Retention_", mode_tag, ".pdf")
-      save_path <- file.path(samp_out_dir, file_name)
+      # Save
+      file_name <- paste0(samp, "_CS_Retention_", mode, ".pdf")
+      save_path <- file.path(output_dir, file_name)
 
+      # Standard A4 Landscape
       ggplot2::ggsave(save_path, final_layout, width = kariocas_dims$width, height = kariocas_dims$height)
-
     }
   }
 
-  message("\nSUCCESS: Retention analysis completed with ggtext styling.")
+  message("\nSUCCESS: Retention analysis completed. Files saved in: ", output_dir)
   return(invisible(NULL))
 }
