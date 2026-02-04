@@ -1,13 +1,13 @@
 #' Internal: Convert TSE to Tidy Dataframe
 #'
 #' Helper function to bridge Bioconductor objects (TSE) with karioCaS plotting functions.
-#' Handles column name collisions (Rank vs Lowest_Rank) and preserves Taxonomy.
+#' Handles column name collisions (Rank vs Lowest_Rank) and preserves Taxonomy groupings.
 #'
 #' @param input Input which can be a path to RDS, a directory, or a TSE object.
 #' @return A tidy data.frame compatible with karioCaS functions.
 #' @noRd
 #' @importFrom SummarizedExperiment assay rowData colData
-#' @importFrom dplyr left_join mutate select filter rename
+#' @importFrom dplyr left_join mutate select filter rename all_of
 #' @importFrom tidyr pivot_longer
 #' @importFrom tibble rownames_to_column
 
@@ -23,7 +23,7 @@
     if (is(obj, "TreeSummarizedExperiment") || is(obj, "SummarizedExperiment")) {
       tse_obj <- obj
     } else if (is.data.frame(obj)) {
-      return(obj)
+      return(obj) # Legacy support
     }
   } else if (is.character(input) && dir.exists(input)) {
     tse_path <- file.path(input, "000_karioCaS_input_matrix", "karioCaS_TSE.rds")
@@ -69,7 +69,7 @@
   # 4. Prepare for Plotting (Pivot Ranks)
 
   # Create static copies of high-level groups
-  # (Because pivot_longer will melt the original columns)
+  # (Because pivot_longer will melt the original columns into value/name pairs)
   if ("Domain" %in% colnames(df_base)) df_base$Domain_Group  <- df_base$Domain
   if ("Kingdom" %in% colnames(df_base)) df_base$Kingdom_Group <- df_base$Kingdom
 

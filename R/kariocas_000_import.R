@@ -1,17 +1,15 @@
 #' Import Kraken MPA Reports to TreeSummarizedExperiment (Step 000)
 #'
 #' Reads Kraken2 MPA-style reports directly from the '000_mpa_original' folder.
-#' Parses filenames like 'Sample_CSXX.mpa' (e.g., PILO_CS09.mpa) to extract
-#' Sample Name and Confidence Score.
-#' Parses Taxonomy into 8 ranks: Domain (d__), Kingdom (k__), Phylum (p__)... Species (s__).
-#' Determines the specific 'Rank' of each row.
+#' Parses filenames like 'Sample_CSXX.mpa' (e.g., PILO_CS09.mpa).
+#' Generates a detailed log file for traceability.
 #'
 #' @param project_dir Path to the project root. The script expects a '000_mpa_original' folder inside.
 #'
 #' @return A TreeSummarizedExperiment object (invisibly).
 #' @export
 #' @importFrom utils read.table
-#' @importFrom dplyr bind_rows mutate select distinct left_join case_when
+#' @importFrom dplyr bind_rows mutate select distinct left_join case_when %>%
 #' @importFrom tidyr pivot_wider
 #' @importFrom stringr str_match str_extract str_remove str_detect
 #' @importFrom TreeSummarizedExperiment TreeSummarizedExperiment
@@ -22,24 +20,44 @@
 import_karioCaS <- function(project_dir) {
 
   # ==============================================================================
-  # 1. DEFINE PATHS & VALIDATION
+  # 1. SETUP & LOGGING INIT
   # ==============================================================================
   if (!dir.exists(project_dir)) stop("Project directory not found: ", project_dir)
 
   input_dir  <- file.path(project_dir, "000_mpa_original")
   output_dir <- file.path(project_dir, "000_karioCaS_input_matrix")
+  log_dir    <- file.path(project_dir, "logs")
 
   if (!dir.exists(input_dir)) stop("Input folder missing: ", input_dir)
+  if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+  if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
 
-  if (!dir.exists(output_dir)) {
-    message(">>> Creating output directory: ", output_dir)
-    dir.create(output_dir, recursive = TRUE)
+  # Initialize Log File
+  log_file <- file.path(log_dir, "log_000_data_import.txt")
+
+  # Helper function to write to both console and file
+  log_msg <- function(...) {
+    msg <- paste0(...)
+    message(msg)
+    cat(paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg, "\n"),
+        file = log_file, append = TRUE)
   }
 
-  message(">>> [Bioconductor Integration] Scanning .mpa files in: ", input_dir)
+  # Header
+  cat("====================================================\n", file = log_file)
+  cat("LOG: 000_DATA_IMPORT (Structured)\n", file = log_file, append = TRUE)
+  cat("PROJECT DIR: ", project_dir, "\n", file = log_file, append = TRUE)
+  cat("====================================================\n", file = log_file, append = TRUE)
+
+  log_msg(">>> [Bioconductor Integration] Scanning .mpa files in: ", input_dir)
 
   files <- list.files(input_dir, full.names = TRUE, pattern = "\\.mpa$|\\.txt$|\\.report$")
-  if (length(files) == 0) stop("No files found in ", input_dir)
+  if (length(files) == 0) {
+    log_msg("CRITICAL ERROR: No files found in ", input_dir)
+    stop("No files found.")
+  }
+
+  log_msg("FOUND: ", length(files), " potential files.")
 
   long_data_list <- list()
   fname_regex <- "^(.*)_CS([0-9]+)\\.(mpa|txt|report)$"
@@ -52,7 +70,7 @@ import_karioCaS <- function(project_dir) {
     matches <- stringr::str_match(fname, fname_regex)
 
     if (is.na(matches[1, 1])) {
-      warning("Skipping file with unexpected name format: ", fname)
+      log_msg("WARNING: Skipping file with unexpected name format: ", fname)
       next
     }
 
@@ -60,7 +78,7 @@ import_karioCaS <- function(project_dir) {
     cs_str    <- matches[1, 3]
     cs_raw    <- as.numeric(cs_str)
 
-    # Normalize CS logic (09 -> 90, 00 -> 0)
+    # Normalize CS logic
     if (cs_raw < 10 && nchar(cs_str) == 2 && substr(cs_str, 1, 1) == "0") {
       cs_val_num <- cs_raw * 10
     } else {
@@ -68,14 +86,30 @@ import_karioCaS <- function(project_dir) {
     }
     if (cs_raw == 0) cs_val_num <- 0
 
+    log_msg(" -> Reading: ", fname, " (interpreted as Sample: ", samp_name, " | CS: ", cs_val_num, ")")
+
     raw <- tryCatch(
-      utils::read.table(f, sep = "\t", stringsAsFactors = FALSE, quote = ""),
-      error = function(e) NULL
+      utils::read.table(f, sep = "\t", stringsAsFactors = FALSE, quote = "", comment.char = "", fill = TRUE),
+      error = function(e) {
+        log_msg("ERROR: Failed to read file: ", fname, " - ", e$message)
+        return(NULL)
+      }
     )
 
-    if (is.null(raw) || nrow(raw) == 0) next
+    if (is.null(raw) || nrow(raw) == 0) {
+      log_msg("WARNING: File is empty or skipped: ", fname)
+      next
+    }
 
+    if (ncol(raw) < 2) {
+      log_msg("WARNING: File has fewer than 2 columns, skipping: ", fname)
+      next
+    }
+
+    raw <- raw[, 1:2]
     colnames(raw) <- c("Taxonomy", "Counts")
+    raw$Counts <- as.numeric(raw$Counts)
+
     unique_col_id <- paste0(samp_name, "_CS", sprintf("%02d", cs_val_num))
 
     long_data_list[[unique_col_id]] <- data.frame(
@@ -88,9 +122,12 @@ import_karioCaS <- function(project_dir) {
     )
   }
 
-  if (length(long_data_list) == 0) stop("No valid data could be read.")
+  if (length(long_data_list) == 0) {
+    log_msg("CRITICAL: No valid data could be assembled.")
+    stop("No valid data.")
+  }
 
-  message(">>> Assembling Data Matrix...")
+  log_msg(">>> Assembling Data Matrix...")
   df_big <- dplyr::bind_rows(long_data_list)
 
   # ==============================================================================
@@ -104,9 +141,9 @@ import_karioCaS <- function(project_dir) {
   rownames(count_mat) <- mat_df$Taxonomy
 
   # ==============================================================================
-  # 4. PARSE TAXONOMY (FULL HIERARCHY)
+  # 4. PARSE TAXONOMY
   # ==============================================================================
-  message(">>> Parsing Taxonomy (8 Levels)...")
+  log_msg(">>> Parsing Taxonomy (8 Levels)...")
   tax_strings <- rownames(count_mat)
 
   extract_rank <- function(x, pattern) {
@@ -114,8 +151,6 @@ import_karioCaS <- function(project_dir) {
     stringr::str_remove(part, paste0(pattern, "__"))
   }
 
-  # Determine the lowest Rank for each row
-  # Logic: Check the last tag in the string
   determine_rank <- function(x) {
     dplyr::case_when(
       stringr::str_detect(x, "\\|s__") ~ "Species",
@@ -133,7 +168,7 @@ import_karioCaS <- function(project_dir) {
   row_data_df <- data.frame(
     Taxonomy_Full = tax_strings,
     Domain  = extract_rank(tax_strings, "d"),
-    Kingdom = extract_rank(tax_strings, "k"), # Kingdom is separate now!
+    Kingdom = extract_rank(tax_strings, "k"),
     Phylum  = extract_rank(tax_strings, "p"),
     Class   = extract_rank(tax_strings, "c"),
     Order   = extract_rank(tax_strings, "o"),
@@ -145,25 +180,15 @@ import_karioCaS <- function(project_dir) {
   )
 
   # ==============================================================================
-  # 5. SAVE AUDIT TSV (COMPLETE STRUCTURE)
+  # 5. SAVE OUTPUTS & LOG
   # ==============================================================================
-  # We want the audit file to look like the matrix: Taxonomy | Ranks... | Samples...
-
-  # Combine row data with counts
-  audit_df <- dplyr::bind_cols(row_data_df, as.data.frame(count_mat))
-
   audit_file <- file.path(output_dir, "karioCaS_matrix_audit.tsv")
-  message(">>> Saving Human-Readable Audit File: ", audit_file)
+  audit_df <- dplyr::bind_cols(row_data_df, as.data.frame(count_mat))
   readr::write_tsv(audit_df, audit_file)
+  log_msg("SAVED TSV AUDIT: ", audit_file)
 
-  # ==============================================================================
-  # 6. CREATE & SAVE TSE
-  # ==============================================================================
-  # Metadata
-  meta_map <- df_big %>%
-    dplyr::select(Col_ID, Sample, CS) %>%
-    dplyr::distinct()
-
+  # Create TSE
+  meta_map <- df_big %>% dplyr::select(Col_ID, Sample, CS) %>% dplyr::distinct()
   meta_ordered <- meta_map[match(colnames(count_mat), meta_map$Col_ID), ]
 
   col_data <- S4Vectors::DataFrame(
@@ -181,7 +206,9 @@ import_karioCaS <- function(project_dir) {
   save_path <- file.path(output_dir, "karioCaS_TSE.rds")
   saveRDS(tse, save_path)
 
-  message("SUCCESS: TreeSummarizedExperiment saved at: ", save_path)
+  log_msg("SAVED TSE OBJECT: ", save_path)
+  log_msg("FINAL DIMENSIONS: ", nrow(tse), " Taxa x ", ncol(tse), " Observations")
+  log_msg("SUCCESS: Import completed.")
 
   return(invisible(tse))
 }
