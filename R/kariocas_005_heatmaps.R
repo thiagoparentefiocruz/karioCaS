@@ -3,6 +3,8 @@
 #' Creates Relative Abundance (%) heatmaps focused on survivors at a specific
 #' Confidence Score. "Elite" survivors are clustered by similarity, while lost taxa
 #' are aggregated into "Loss Groups" at the bottom.
+#' Includes robust data enrichment and count consolidation to prevent abundance dilution.
+#' Now explicitly handles domains with zero survivors at target CS (showing only loss groups).
 #'
 #' @param project_dir Path to the project root.
 #' @param analysis_rank Taxonomic rank to analyze. If NULL, defaults to "Genus".
@@ -10,12 +12,13 @@
 #' @param top_n Number of top survivors to display individually (default: 20).
 #'
 #' @export
-#' @importFrom readr read_rds
-#' @importFrom dplyr filter mutate select group_by summarise arrange slice_head pull case_when ungroup left_join bind_rows distinct n_distinct
+#' @importFrom dplyr filter mutate select group_by summarise arrange slice_head pull case_when ungroup left_join bind_rows distinct n_distinct rename
 #' @importFrom tidyr complete pivot_longer pivot_wider replace_na
 #' @importFrom ggplot2 ggplot aes geom_tile scale_fill_gradientn labs theme element_text element_blank scale_x_discrete scale_y_discrete guides guide_colorbar facet_grid unit element_rect
 #' @importFrom stats hclust dist as.dendrogram reorder
 #' @importFrom forcats fct_reorder fct_inorder
+#' @importFrom tibble column_to_rownames
+#' @importFrom SummarizedExperiment rowData
 
 heatmaps_karioCaS <- function(project_dir,
                               analysis_rank = NULL,
@@ -23,37 +26,66 @@ heatmaps_karioCaS <- function(project_dir,
                               top_n = 20) {
 
   # ==============================================================================
-  # 1. SETUP & DIRECTORIES
+  # 1. SETUP & LOGGING
   # ==============================================================================
-  # Default Rank Handling
   if (is.null(analysis_rank)) {
     analysis_rank <- "Genus"
   }
 
-  input_dir  <- file.path(project_dir, "000_karioCaS_input_matrix")
   output_dir <- file.path(project_dir, "005_heatmaps")
+  log_dir    <- file.path(project_dir, "logs")
 
-  if (!dir.exists(input_dir)) stop("CRITICAL ERROR: Input directory not found: ", input_dir)
   if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+  if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
 
-  rds_file <- file.path(input_dir, "karioCaS_input_matrix.rds")
-  if (!file.exists(rds_file)) stop("Input RDS file not found: ", rds_file)
+  log_file <- file.path(log_dir, "log_005_heatmaps.txt")
 
-  # ==============================================================================
-  # 2. DATA LOADING
-  # ==============================================================================
-  message(">>> Loading Tidy Data from: ", rds_file)
-  df_long <- readr::read_rds(rds_file)
-
-  # Validate Rank
-  if (!analysis_rank %in% unique(df_long$Rank)) {
-    stop("Rank '", analysis_rank, "' not found in data. Available: ",
-         paste(unique(df_long$Rank), collapse = ", "))
+  log_msg <- function(...) {
+    msg <- paste0(...)
+    message(msg)
+    cat(paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg, "\n"),
+        file = log_file, append = TRUE)
   }
 
+  cat("====================================================\n", file = log_file)
+  cat("LOG: 005_HEATMAP_GENERATION (Loss Groups Fix)\n", file = log_file, append = TRUE)
+  cat("PROJECT DIR: ", project_dir, "\n", file = log_file, append = TRUE)
+  cat("RANK: ", analysis_rank, " | TARGET CS: ", ifelse(is.null(confidence_score), "MAX", confidence_score), "\n", file = log_file, append = TRUE)
+  cat("====================================================\n", file = log_file, append = TRUE)
+
+  # ==============================================================================
+  # 2. DATA LOADING & ENRICHMENT
+  # ==============================================================================
+  log_msg(">>> Loading Data...")
+  df_long <- .get_tidy_data(project_dir)
+
+  # 2.1 Enrich Data with Taxonomy Columns
+  if (!analysis_rank %in% colnames(df_long)) {
+    log_msg(">>> Enriching data with full taxonomy from TSE...")
+    tse_path <- file.path(project_dir, "000_karioCaS_input_matrix", "karioCaS_TSE.rds")
+    if (!file.exists(tse_path)) stop("TSE file missing for enrichment.")
+    tse <- readRDS(tse_path)
+    tax_df <- SummarizedExperiment::rowData(tse) %>% as.data.frame()
+
+    key_col <- "Taxonomy_Full"
+    if (!key_col %in% colnames(df_long)) {
+      if ("Taxonomy" %in% colnames(df_long)) df_long <- df_long %>% dplyr::rename(Taxonomy_Full = Taxonomy)
+      else stop("Could not find Taxonomy key column.")
+    }
+    cols_to_add <- setdiff(colnames(tax_df), colnames(df_long))
+    tax_subset <- tax_df %>% dplyr::select(Taxonomy_Full, dplyr::all_of(cols_to_add))
+    df_long <- df_long %>% dplyr::left_join(tax_subset, by = "Taxonomy_Full")
+  }
+
+  if (!analysis_rank %in% colnames(df_long)) {
+    stop("Rank '", analysis_rank, "' could not be found even after enrichment.")
+  }
+
+  # 2.2 Filter and Set Taxon_Name Explicitly
   df_proc <- df_long %>%
     dplyr::filter(Rank == analysis_rank) %>%
-    dplyr::mutate(Taxon_Name = .data[[analysis_rank]])
+    dplyr::mutate(Taxon_Name = .data[[analysis_rank]]) %>%
+    dplyr::filter(!is.na(Taxon_Name))
 
   SAMPLES <- unique(df_proc$sample)
   DOMAINS <- names(kariocas_colors$domains)
@@ -61,30 +93,26 @@ heatmaps_karioCaS <- function(project_dir,
   # Custom "Barro" Palette (White -> Yellow -> Orange -> Red -> Deep Terracotta)
   barro_palette <- c("#FFFFFF", "#FFEDA0", "#FEB24C", "#F03B20", "#800026")
 
-  message(">>> Starting Heatmap Analysis (Rank: ", analysis_rank, " | Top: ", top_n, ")")
+  log_msg(">>> Starting Heatmap Analysis for ", length(SAMPLES), " samples.")
 
   # ==============================================================================
   # 3. ANALYSIS LOOP
   # ==============================================================================
   for (samp in SAMPLES) {
-    message("  Processing Sample: ", samp)
+    log_msg("------------------------------------------------")
+    log_msg("  Processing Sample: ", samp)
 
     df_samp <- df_proc %>% dplyr::filter(sample == samp)
 
     # 3.0 DETERMINE TARGET CS
     max_cs_in_data <- max(df_samp$CS, na.rm = TRUE)
-
     if (!is.null(confidence_score)) {
       target_cs <- confidence_score
-      if (target_cs > max_cs_in_data) {
-        warning("Requested CS (", target_cs, ") > Max available (", max_cs_in_data, "). Using max.")
-        target_cs <- max_cs_in_data
-      }
+      if (target_cs > max_cs_in_data) target_cs <- max_cs_in_data
     } else {
       target_cs <- max_cs_in_data
     }
 
-    # Filter data up to target CS
     df_samp <- df_samp %>% dplyr::filter(CS <= target_cs)
     all_cs  <- sort(unique(df_samp$CS))
 
@@ -92,25 +120,32 @@ heatmaps_karioCaS <- function(project_dir,
 
     for (dom in DOMAINS) {
 
-      df_dom <- df_samp %>% dplyr::filter(Domain == dom)
+      # 3.0.1 CONSOLIDATE DUPLICATES (Normalization Fix)
+      df_dom <- df_samp %>%
+        dplyr::filter(Domain == dom) %>%
+        dplyr::group_by(CS, Taxon_Name) %>%
+        dplyr::summarise(Counts = sum(Counts, na.rm = TRUE), .groups = "drop")
 
       if (nrow(df_dom) == 0) next
 
       # 3.1 IDENTIFY TOP N *SURVIVORS* AT TARGET CS
       survivors_at_target <- df_dom %>%
         dplyr::filter(CS == target_cs) %>%
-        dplyr::group_by(Taxon_Name) %>%
-        dplyr::summarise(Final_Abund = sum(Counts), .groups = "drop") %>%
-        dplyr::arrange(dplyr::desc(Final_Abund))
+        dplyr::arrange(dplyr::desc(Counts))
 
       elite_taxa_names <- survivors_at_target %>%
         dplyr::slice_head(n = top_n) %>%
         dplyr::pull(Taxon_Name)
 
+      # FIX: DO NOT SKIP if elite_taxa_names is empty.
+      # Even with 0 survivors, we must process the loss groups.
+      if(length(elite_taxa_names) == 0) {
+        log_msg("    Info: ", dom, " has NO survivors at Target CS. Plotting only loss groups.")
+      }
+
       # 3.2 SPLIT DATA
       df_elite <- df_dom %>%
-        dplyr::filter(Taxon_Name %in% elite_taxa_names) %>%
-        dplyr::select(CS, Taxon_Name, Counts)
+        dplyr::filter(Taxon_Name %in% elite_taxa_names)
 
       df_rest <- df_dom %>%
         dplyr::filter(!Taxon_Name %in% elite_taxa_names)
@@ -124,9 +159,14 @@ heatmaps_karioCaS <- function(project_dir,
 
         if (curr_cs_val < target_cs) {
           next_cs_val <- all_cs[i+1]
-          next_taxa   <- unique(df_rest$Taxon_Name[df_rest$CS == next_cs_val])
-          lost_taxa   <- setdiff(curr_taxa, next_taxa)
-          label_suffix <- paste0("Recovered only in CS", sprintf("%02d", curr_cs_val))
+          if(!is.na(next_cs_val)) {
+            next_taxa   <- unique(df_rest$Taxon_Name[df_rest$CS == next_cs_val])
+            lost_taxa   <- setdiff(curr_taxa, next_taxa)
+            label_suffix <- paste0("Recovered only in CS", sprintf("%02d", curr_cs_val))
+          } else {
+            lost_taxa <- curr_taxa
+            label_suffix <- paste0("Lowest abundance ", analysis_rank, " in CS", sprintf("%02d", curr_cs_val))
+          }
         } else {
           lost_taxa    <- curr_taxa
           label_suffix <- paste0("Lowest abundance ", analysis_rank, " in CS", sprintf("%02d", curr_cs_val))
@@ -148,6 +188,9 @@ heatmaps_karioCaS <- function(project_dir,
       df_agg <- dplyr::bind_rows(agg_list)
       df_combined <- dplyr::bind_rows(df_elite, df_agg)
 
+      # Safety check: if everything is empty (no survivors AND no loss groups?), skip.
+      if (nrow(df_combined) == 0) next
+
       # 3.4 CALCULATE RELATIVE ABUNDANCE (%)
       total_reads_per_cs <- df_dom %>%
         dplyr::group_by(CS) %>%
@@ -166,12 +209,17 @@ heatmaps_karioCaS <- function(project_dir,
 
       # A) Cluster Elite Taxa based on Abundance Profile
       if (length(elite_taxa_names) > 2) {
-        mat_elite <- df_metrics %>%
+        mat_prep <- df_metrics %>%
           dplyr::filter(Taxon_Name %in% elite_taxa_names) %>%
           dplyr::select(Taxon_Name, CS, Rel_Abund) %>%
+          dplyr::distinct(Taxon_Name, CS, .keep_all = TRUE)
+
+        mat_elite <- mat_prep %>%
           tidyr::pivot_wider(names_from = CS, values_from = Rel_Abund, values_fill = 0) %>%
           tibble::column_to_rownames("Taxon_Name") %>%
           as.matrix()
+
+        mat_elite[is.na(mat_elite)] <- 0
 
         row_means <- rowMeans(mat_elite)
         dist_mat <- stats::dist(mat_elite, method = "euclidean")
@@ -186,9 +234,12 @@ heatmaps_karioCaS <- function(project_dir,
       }
 
       # B) Order Aggregated Rows (Bottom Up)
-      agg_names_ordered <- unique(df_agg$Taxon_Name)
+      if(!is.null(df_agg) && nrow(df_agg) > 0) {
+        agg_names_ordered <- unique(df_agg$Taxon_Name)
+      } else {
+        agg_names_ordered <- character(0)
+      }
 
-      # Combine
       final_levels <- c(agg_names_ordered, elite_order)
 
       df_metrics <- df_metrics %>%
@@ -198,12 +249,13 @@ heatmaps_karioCaS <- function(project_dir,
 
     } # End Domain Loop
 
-    # Combine all domains
     full_plot_data <- dplyr::bind_rows(domain_data_list)
 
-    if (nrow(full_plot_data) == 0) next
+    if (nrow(full_plot_data) == 0) {
+      log_msg("    No data to plot for this sample.")
+      next
+    }
 
-    # Enforce Ordering
     full_plot_data <- full_plot_data %>%
       dplyr::arrange(Domain, Order_Index) %>%
       dplyr::mutate(Taxon_Name = factor(Taxon_Name, levels = unique(Taxon_Name)))
@@ -212,10 +264,8 @@ heatmaps_karioCaS <- function(project_dir,
     p <- ggplot2::ggplot(full_plot_data, ggplot2::aes(x = CS_Label, y = Taxon_Name, fill = Rel_Abund)) +
       ggplot2::geom_tile(color = "white", linewidth = 0.2) +
 
-      # Vertical Stack
       ggplot2::facet_grid(Domain ~ ., scales = "free_y", space = "free_y") +
 
-      # Palette: Barro
       ggplot2::scale_fill_gradientn(
         colors = barro_palette,
         name = "Rel. Abund. (%)",
@@ -223,11 +273,10 @@ heatmaps_karioCaS <- function(project_dir,
         limits = c(0, 100)
       ) +
 
-      # LEGEND CONFIGURATION
       ggplot2::guides(fill = ggplot2::guide_colorbar(
-        title.position = "right",   # Title to the left of the bar
-        title.hjust = 1,           # Right-align title text against the bar
-        title.vjust = 1,           # Vertical adjustment to align with bar
+        title.position = "right",
+        title.hjust = 1,
+        title.vjust = 1,
         barwidth = ggplot2::unit(7, "cm"),
         barheight = ggplot2::unit(0.3, "cm")
       )) +
@@ -243,33 +292,26 @@ heatmaps_karioCaS <- function(project_dir,
 
       ggplot2::theme(
         axis.text.x = ggplot2::element_text(angle = 0, hjust = 0.5, size = 10),
-
-        # Y Axis: Italic + No Ticks
         axis.text.y = ggplot2::element_text(size = 9, face = "italic"),
         axis.ticks.y = ggplot2::element_blank(),
-
         strip.text.y = ggplot2::element_text(angle = 0, face = "bold", size = 10),
         strip.background = ggplot2::element_rect(fill = "grey95", color = NA),
-
         panel.grid = ggplot2::element_blank(),
         axis.line = ggplot2::element_blank(),
         panel.spacing = ggplot2::unit(0.5, "cm"),
-
-        # LEGEND AT BOTTOM with Padding
         legend.position = "bottom",
         legend.direction = "horizontal",
         legend.title = ggplot2::element_text(size = 8, face = "plain"),
-        legend.box.spacing = ggplot2::unit(0.8, "cm") # Move away from X axis
+        legend.box.spacing = ggplot2::unit(0.8, "cm")
       )
 
-    # 3.7 SAVE (PORTRAIT A4)
     file_name <- paste0(samp, "_Heatmap_", analysis_rank, "_CS", sprintf("%02d", target_cs), ".pdf")
     save_path <- file.path(output_dir, file_name)
 
     ggplot2::ggsave(save_path, p, width = kariocas_dims$height, height = kariocas_dims$width)
-
+    log_msg("    -> Generated: ", file_name)
   }
 
-  message("\nSUCCESS: Heatmap analysis completed. Files saved in: ", output_dir)
+  log_msg("SUCCESS: Heatmap analysis completed.")
   return(invisible(NULL))
 }
