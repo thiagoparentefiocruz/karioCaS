@@ -24,4 +24,6 @@ heatmaps_karioCaS(
 Creates Relative Abundance (%) heatmaps focused on survivors at a specific
 Confidence Score. "Elite" survivors are clustered by similarity, while lost taxa
 are aggregated into "Loss Groups" at the bottom.
+Includes robust data enrichment and count consolidation to prevent abundance dilution.
+Now explicitly handles domains with zero survivors at target CS (showing only loss groups).
 }

@@ -14,8 +14,6 @@ A TreeSummarizedExperiment object (invisibly).
 }
 \description{
 Reads Kraken2 MPA-style reports directly from the '000_mpa_original' folder.
-Parses filenames like 'Sample_CSXX.mpa' (e.g., PILO_CS09.mpa) to extract
-Sample Name and Confidence Score.
-Parses Taxonomy into 8 ranks: Domain (d__), Kingdom (k__), Phylum (p__)... Species (s__).
-Determines the specific 'Rank' of each row.
+Parses filenames like 'Sample_CSXX.mpa' (e.g., PILO_CS09.mpa).
+Generates a detailed log file for traceability.
 }
