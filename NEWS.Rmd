@@ -3,9 +3,9 @@ title: "NEWS"
 output: html_document
 ---
 
-# karioCaS 0.2.0
-
-* **Same Old, Same Old:** To our final users, nothing changes. Your existing workflows remain intact.
-* **The engines were all changed:** Original data were wide format files. Now, we switched to tidy long format RDS files for internal processing.
-* **Enhancement:** Also, we now have a dedicated function to configure style settings for ggplot2 visualizations, ensuring consistent aesthetics across all plots.
+# karioCaS 1.0.0
+* Major refactor of analysis modules using TSE format.
+* Added Smart Match for CS selection.
+* Improved visualizations (Rare Taxa plots).
+* Robust documentation and error handling.
 
