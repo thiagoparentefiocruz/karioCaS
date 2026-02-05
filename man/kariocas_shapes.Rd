@@ -3,14 +3,16 @@
 \docType{data}
 \name{kariocas_shapes}
 \alias{kariocas_shapes}
-\title{Official karioCaS Shapes}
+\title{Official karioCaS Shapes
+Modified to be a list to support $ranks accessor in new functions}
 \format{
-An object of class \code{numeric} of length 9.
+An object of class \code{list} of length 1.
 }
 \usage{
 kariocas_shapes
 }
 \description{
 Official karioCaS Shapes
+Modified to be a list to support $ranks accessor in new functions
 }
 \keyword{datasets}

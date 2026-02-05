@@ -11,4 +11,5 @@ taxa_retention(project_dir)
 }
 \description{
 Executes read retention analysis based on Confidence Score (Kraken/Bracken).
+Generates detailed logs including baseline stats for QC.
 }

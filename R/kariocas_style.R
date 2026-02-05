@@ -7,6 +7,7 @@
 #' @importFrom ggplot2 theme_classic theme element_text element_blank element_line element_rect margin unit guide_legend ggplot annotate labs scale_y_continuous scale_x_continuous expansion
 #' @importFrom scales label_number cut_short_scale log_trans
 #' @importFrom ggtext element_markdown
+
 kariocas_colors <- list(
   ranks = c(
     "Phylum"  = "#000000", "Class"   = "#E69F00", "Order"   = "#56B4E9",
@@ -25,11 +26,14 @@ kariocas_colors <- list(
 )
 
 #' Official karioCaS Shapes
+#' Modified to be a list to support $ranks accessor in new functions
 #' @export
-kariocas_shapes <- c(
-  "Phylum" = 15, "Class" = 16, "Order" = 17,
-  "Family" = 18, "Genus" = 25, "Species" = 8,
-  "Total Reads" = 15, "Level Reads" = 17, "Level Taxa" = 16
+kariocas_shapes <- list(
+  ranks = c(
+    "Phylum" = 15, "Class" = 16, "Order" = 17,
+    "Family" = 18, "Genus" = 25, "Species" = 8,
+    "Total Reads" = 15, "Level Reads" = 17, "Level Taxa" = 16
+  )
 )
 
 #' Official karioCaS Line Types

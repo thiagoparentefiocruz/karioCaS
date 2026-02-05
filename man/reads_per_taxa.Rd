@@ -4,15 +4,29 @@
 \alias{reads_per_taxa}
 \title{Generate Read Cutoff Saturation Analysis (Step 003)}
 \usage{
-reads_per_taxa(project_dir, analysis_level = "Species", cutoff_mode = "Both")
+reads_per_taxa(
+  project_dir,
+  analysis_level = "Species",
+  x_max_bac = 10,
+  x_max_arc = 10,
+  x_max_euk = 10,
+  x_max_vir = 10
+)
 }
 \arguments{
 \item{project_dir}{Path to the project root.}
 
 \item{analysis_level}{Taxonomic rank to analyze (default: "Species").}
 
-\item{cutoff_mode}{Visualization mode: "Extinction" (Full 0-100%), "Stabilization", or "Both".}
+\item{x_max_bac}{Integer. Max X-axis value for Bacteria in Rare Taxa plot (default: 10).}
+
+\item{x_max_arc}{Integer. Max X-axis value for Archaea in Rare Taxa plot (default: 10).}
+
+\item{x_max_euk}{Integer. Max X-axis value for Eukaryota in Rare Taxa plot (default: 10).}
+
+\item{x_max_vir}{Integer. Max X-axis value for Viruses in Rare Taxa plot (default: 10).}
 }
 \description{
 Performs a saturation analysis by progressively filtering taxa with low read counts.
+Generates two views: "Saturation" (Log scale overview) and "Rare_Taxa" (Linear scale focus on low counts).
 }

@@ -23,6 +23,6 @@ taxa_resolution(
 \description{
 Creates stacked bar plots showing the resolution efficiency between a Parent Rank
 (e.g., Genus) and a Child Rank (e.g., Species).
-Displays how many reads were fully resolved to the Child level vs. those that
-remained ambiguous at the Parent level (Exclusive).
+Performs strict subtraction: (Parent Row Value) - (Sum of Child Row Values).
+Uses max() for Parent aggregation to prevent double-counting of children in cumulative data.
 }

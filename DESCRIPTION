@@ -30,7 +30,10 @@ Imports:
     tidyr,
     purrr,
     scales,
-    ggtext
+    ggtext,
+    SummarizedExperiment,
+    TreeSummarizedExperiment,
+    S4Vectors
 Suggests: 
     knitr,
     rmarkdown

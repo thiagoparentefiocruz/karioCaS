@@ -11,9 +11,5 @@ upset_kariocas(project_dir)
 }
 \description{
 "karioCaS never are upset!"
-}
-\details{
-This function generates UpSet plots to visualize the intersection of taxa
-recovered across different Confidence Scores (CS). It helps identify which taxa
-are robust (present in all CS) versus fragile (lost at higher stringency).
+Generates UpSet plots with detailed logging.
 }
