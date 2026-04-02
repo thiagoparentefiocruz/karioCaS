@@ -161,8 +161,10 @@ optimize_CS <- function(project_dir, tax_level = "Species") {
       # 3.3 PLOTTING THE ELBOW
       # ==========================================================================
       
-      col_primary <- kariocas_colors$special[["Level Taxa"]]  # Red
-      col_sec     <- kariocas_colors$special[["Parent"]]      # Grey/Blueish
+      spec_colors <- get_kariocas_colors("special")
+      col_primary <- spec_colors[["Level Taxa"]]
+      col_sec     <- spec_colors[["Parent"]]
+      labels_vec  <- get_kariocas_labels()
       
       sub_txt <- sprintf("Primary SI: CS %02d", primary_cs)
       if(!is.na(sec1_cs)) sub_txt <- paste0(sub_txt, " | Sec: ", sec1_cs)

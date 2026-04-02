@@ -192,8 +192,9 @@ taxa_resolution <- function(project_dir,
         stack_data$Category    <- factor(stack_data$Category, levels = c(label_exclusive, label_child))
 
         # 3.5 PLOT
+        spec_colors <- get_kariocas_colors("special")
         fill_values <- setNames(
-          c(kariocas_colors$special[["Parent"]], kariocas_colors$special[["Child"]]),
+          c(spec_colors[["Parent"]], spec_colors[["Child"]]),
           c(label_exclusive, label_child)
         )
 

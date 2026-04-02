@@ -172,8 +172,10 @@ reads_per_taxa <- function(project_dir,
                                    label_kariocas_auto(total_taxa_dom), " ", analysis_level)
 
           # Style Setup
-          shapes_vec <- if(is.list(kariocas_shapes)) kariocas_shapes$ranks else kariocas_shapes
-          if(is.null(shapes_vec)) shapes_vec <- kariocas_shapes
+          shapes_vec     <- get_kariocas_shapes("ranks")
+          spec_colors    <- get_kariocas_colors("special")
+          spec_linetypes <- get_kariocas_linetypes()
+          labels_vec     <- get_kariocas_labels()
 
           # 3.3 PLOT CONSTRUCTION ----------------------------------------------
           p <- ggplot2::ggplot(df_plot, ggplot2::aes(x = Cutoff, y = Pct, group = Metric_Key)) +
@@ -187,7 +189,7 @@ reads_per_taxa <- function(project_dir,
             ) +
 
             # Manual Styles
-            ggplot2::scale_color_manual(values = kariocas_colors$special, labels = legend_labels) +
+            ggplot2::scale_color_manual(values = spec_colors, labels = legend_labels) +
             ggplot2::scale_shape_manual(values = shapes_vec, labels = legend_labels) +
             ggplot2::scale_linetype_manual(values = kariocas_linetypes, labels = legend_labels) +
 

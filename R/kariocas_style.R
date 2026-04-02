@@ -1,14 +1,18 @@
-#' karioCaS Visualization Styles
+#' karioCaS Visualization Styles & Helpers
 #'
 #' Single Source of Truth for visual elements in karioCaS.
 #' Follows Nature/Science publication standards.
 #'
 #' @export
-#' @importFrom ggplot2 theme_classic theme element_text element_blank element_line element_rect margin unit guide_legend ggplot annotate labs scale_y_continuous scale_x_continuous expansion
+#' @importFrom ggplot2 theme_classic theme element_text element_blank element_line element_rect margin unit guide_legend ggplot annotate labs scale_y_continuous scale_x_continuous
 #' @importFrom scales label_number cut_short_scale log_trans
 #' @importFrom ggtext element_markdown
 
-kariocas_colors <- list(
+# ==============================================================================
+# 1. CORE VISUAL ASSETS (Hidden from direct user manipulation)
+# ==============================================================================
+
+.kariocas_internal_colors <- list(
   ranks = c(
     "Phylum"  = "#000000", "Class"   = "#E69F00", "Order"   = "#56B4E9",
     "Family"  = "#009E73", "Genus"   = "#F0E442", "Species" = "#D55E00"
@@ -25,10 +29,7 @@ kariocas_colors <- list(
   heatmap = c("#4DBBD5", "#FFFFFF", "#E64B35")
 )
 
-#' Official karioCaS Shapes
-#' Modified to be a list to support $ranks accessor in new functions
-#' @export
-kariocas_shapes <- list(
+.kariocas_internal_shapes <- list(
   ranks = c(
     "Phylum" = 15, "Class" = 16, "Order" = 17,
     "Family" = 18, "Genus" = 25, "Species" = 8,
@@ -36,14 +37,50 @@ kariocas_shapes <- list(
   )
 )
 
-#' Official karioCaS Line Types
-#' @export
-kariocas_linetypes <- c(
+.kariocas_internal_linetypes <- c(
   "Total Reads" = "longdash", "Level Reads" = "longdash", "Level Taxa" = "solid"
 )
 
 # ==============================================================================
-# 2. FORMATTERS & LABELS
+# 2. ACCESSOR FUNCTIONS (The Bioconductor Way)
+# ==============================================================================
+
+#' Get karioCaS Official Colors
+#'
+#' Securely retrieves the official color palettes used across the karioCaS package.
+#'
+#' @param type Character. The palette to retrieve: "ranks", "domains", "special", "upset", or "heatmap".
+#' @return A named vector or list of colors.
+#' @export
+get_kariocas_colors <- function(type = c("ranks", "domains", "special", "upset", "heatmap")) {
+  type <- match.arg(type)
+  return(.kariocas_internal_colors[[type]])
+}
+
+#' Get karioCaS Official Shapes
+#'
+#' Securely retrieves the official ggplot2 shapes for taxonomic ranks and special metrics.
+#'
+#' @param type Character. Currently supports "ranks".
+#' @return A named vector of shape integers.
+#' @export
+get_kariocas_shapes <- function(type = "ranks") {
+  if (type == "ranks") return(.kariocas_internal_shapes$ranks)
+  stop("Shape type not recognized.")
+}
+
+#' Get karioCaS Official Linetypes
+#'
+#' Retrieves standard linetypes for read and taxa retention plots.
+#'
+#' @return A named character vector of linetypes.
+#' @export
+get_kariocas_linetypes <- function() {
+  return(.kariocas_internal_linetypes)
+}
+
+# ==============================================================================
+# 3. FORMATTERS & LABELS
 # ==============================================================================
 
 #' Format numbers with K/M suffixes
@@ -62,18 +99,19 @@ label_kariocas_auto <- function(x) {
 #' Standard Axis Labels with HTML/Markdown Styling
 #' Uses ggtext syntax for mixing fonts and sizes.
 #' @export
-kariocas_labels <- list(
-  y_log10_retained = "**% Retained**<br><span style='font-size:8pt;color:grey40'>(axis scaled to log<sub>10</sub>)</span>",
-  x_log10_reads    = "**Reads**<br><span style='font-size:8pt;color:grey40'>(axis scaled to log<sub>10</sub>)</span>",
-  y_confidence     = "**Confidence Score (%)**"
-)
+get_kariocas_labels <- function() {
+  list(
+    y_log10_retained = "**% Retained**<br><span style='font-size:8pt;color:grey40'>(axis scaled to log<sub>10</sub>)</span>",
+    x_log10_reads    = "**Reads**<br><span style='font-size:8pt;color:grey40'>(axis scaled to log<sub>10</sub>)</span>",
+    y_confidence     = "**Confidence Score (%)**"
+  )
+}
 
 # ==============================================================================
-# 3. CUSTOM SCALES
+# 4. CUSTOM SCALES
 # ==============================================================================
 
 #' Log10 Scale with Smart Integer Formatting
-#' NOW FLEXIBLE: Accepts a 'labels' argument to override the default.
 #'
 #' @param labels A formatting function or vector. Defaults to label_kariocas_auto.
 #' @param ... Other arguments passed to scale_y_continuous
@@ -98,10 +136,10 @@ scale_x_kariocas_log10 <- function(labels = label_kariocas_auto, ...) {
 }
 
 # ==============================================================================
-# 4. HELPER PLOTS
+# 5. HELPER PLOTS
 # ==============================================================================
 
-#' Generate a Standard "No Data" Plot (Skeleton Style)
+#' Generate a Standard "No Data" Plot
 #' @export
 plot_kariocas_empty <- function(title_text = "No Data",
                                 subtitle_text = NULL,
@@ -125,12 +163,14 @@ plot_kariocas_empty <- function(title_text = "No Data",
 }
 
 # ==============================================================================
-# 5. DIMENSIONS & THEME
+# 6. DIMENSIONS & THEME
 # ==============================================================================
 
 #' Standard Output Dimensions (A4 Landscape)
 #' @export
-kariocas_dims <- list(width = 11.69, height = 8.27)
+get_kariocas_dims <- function() {
+  list(width = 11.69, height = 8.27)
+}
 
 #' karioCaS Publication Theme
 #' @export
@@ -146,7 +186,7 @@ theme_kariocas <- function(base_size = 12, base_family = "sans") {
         size = 10, hjust = 0.5, color = "grey30",
         margin = ggplot2::margin(b = 10)
       ),
-
+      
       # Axis Titles (Compact Margins)
       axis.title.y = ggtext::element_markdown(
         hjust = 0.5, size = 11, color = "black", lineheight = 1.2,
@@ -156,25 +196,25 @@ theme_kariocas <- function(base_size = 12, base_family = "sans") {
         hjust = 0.5, size = 11, color = "black", lineheight = 1.2,
         margin = ggplot2::margin(t = 5)
       ),
-
+      
       axis.text = ggplot2::element_text(size = 10, color = "black"),
-
+      
       # Legend
       legend.position = "bottom",
       legend.title = ggplot2::element_blank(),
       legend.text = ggplot2::element_text(size = 10),
       legend.margin = ggplot2::margin(t = -5),
       legend.box = "horizontal",
-
+      
       # Grid & Lines
       panel.grid.major.y = ggplot2::element_line(color = "grey90", linetype = "dotted"),
       panel.grid.major.x = ggplot2::element_blank(),
       axis.line = ggplot2::element_line(linewidth = 0.5, color = "black"),
-
+      
       # Facets
       strip.background = ggplot2::element_rect(fill = "grey95", color = NA),
       strip.text = ggplot2::element_text(face = "bold", size = 10, color = "black"),
-
+      
       # Plot Margins
       plot.margin = ggplot2::margin(10, 15, 10, 10)
     )

@@ -150,9 +150,9 @@ taxa_retention <- function(project_dir) {
       )
 
       # NOTE: Using restored structure
-      shapes_vec <- if(is.list(kariocas_shapes)) kariocas_shapes$ranks else kariocas_shapes
-      colors_vec <- if(is.list(kariocas_colors)) kariocas_colors$ranks else kariocas_colors
-      if(is.null(colors_vec) && is.list(kariocas_colors)) colors_vec <- kariocas_colors$ranks
+      shapes_vec <- get_kariocas_shapes("ranks")
+      colors_vec <- get_kariocas_colors("ranks")
+      labels_vec <- get_kariocas_labels()
 
       p <- ggplot2::ggplot(df_dom, ggplot2::aes(x = CS, y = Pct_Taxa, color = Rank, group = Rank, shape = Rank)) +
         ggplot2::geom_line(linewidth = 1) +
@@ -164,8 +164,8 @@ taxa_retention <- function(project_dir) {
         ggplot2::labs(
           title = dom,
           subtitle = sub_str,
-          x = kariocas_labels$y_confidence,
-          y = kariocas_labels$y_log10_retained
+          x = labels_vec$y_confidence,
+          y = labels_vec$y_log10_retained
         ) +
         theme_kariocas() +
         ggplot2::guides(color = ggplot2::guide_legend(nrow = 1))
@@ -237,18 +237,18 @@ taxa_retention <- function(project_dir) {
           fmt_num(base_t), " ", r
         )
 
-        col_taxa  <- kariocas_colors$special[["Level Taxa"]]
-        col_total <- kariocas_colors$special[["Total Reads"]]
-        col_reads <- kariocas_colors$special[["Level Reads"]]
-
-        shp_vec <- if(is.list(kariocas_shapes)) kariocas_shapes$ranks else kariocas_shapes
-        if(is.null(shp_vec)) shp_vec <- kariocas_shapes
-
+        spec_colors <- get_kariocas_colors("special")
+        col_taxa  <- spec_colors[["Level Taxa"]]
+        col_total <- spec_colors[["Total Reads"]]
+        col_reads <- spec_colors[["Level Reads"]]
+        
+        shp_vec   <- get_kariocas_shapes("ranks")
         shp_taxa  <- shp_vec[["Level Taxa"]]
         shp_total <- shp_vec[["Total Reads"]]
         shp_reads <- shp_vec[["Level Reads"]]
-
-        lt_vec <- kariocas_linetypes
+        
+        lt_vec     <- get_kariocas_linetypes()
+        labels_vec <- get_kariocas_labels()
         lt_taxa  <- lt_vec[["Level Taxa"]]
         lt_total <- lt_vec[["Total Reads"]]
         lt_reads <- lt_vec[["Level Reads"]]
@@ -264,8 +264,8 @@ taxa_retention <- function(project_dir) {
           ggplot2::labs(
             title = dom,
             subtitle = sub_str_rank,
-            x = kariocas_labels$y_confidence,
-            y = kariocas_labels$y_log10_retained,
+            x = labels_vec$y_confidence,
+            y = labels_vec$y_log10_retained,
             color = NULL, linetype = NULL, shape = NULL
           ) +
           theme_kariocas() +
