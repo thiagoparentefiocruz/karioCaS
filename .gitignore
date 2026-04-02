@@ -5,3 +5,4 @@
 *.Rproj
 /log_archives
 test_visual_v010.R
+inst/doc

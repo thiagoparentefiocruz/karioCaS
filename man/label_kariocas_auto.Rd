@@ -7,6 +7,9 @@ Default uses comma for thousands to avoid conflict with decimal dot.}
 \usage{
 label_kariocas_auto(x)
 }
+\arguments{
+\item{x}{A numeric vector to format.}
+}
 \description{
 Smart Number Formatter for Logs
 Default uses comma for thousands to avoid conflict with decimal dot.

@@ -1,0 +1,131 @@
+---
+title: "karioCaS: Kraken Confidence Scores Exploration"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{karioCaS: Kraken Confidence Scores Exploration}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+## Introduction
+
+Metagenomic classification using k-mer based tools like Kraken2 is incredibly fast, but it is notoriously prone to false-positive assignments. The standard approach of applying a single, global Confidence Score (CS) threshold across an entire sample is fundamentally flawed: **one size does not fit all**. Biological domains (Bacteria, Archaea, Viruses, and Eukaryota) have vastly different database representations, genome sizes, and k-mer uniqueness.
+
+**karioCaS** (Kraken Confidence Scores for Reliable Domain-Specific Microbiota Inference) is an R package designed to solve this problem. It provides a robust analytical framework to evaluate taxonomic stability across multiple stringency levels, allowing researchers to find the exact inflection point where statistical noise is removed without losing true biological signal.
+
+```{r setup}
+library(karioCaS)
+```
+
+---
+
+## 1. Setting up the Environment
+
+karioCaS relies on a strict, automated directory architecture. To analyze your data, you must place your Kraken2/Metaphlan-style outputs inside a base directory, specifically within a folder named `000_mpa_original`.
+
+Files must follow the naming convention: `SAMPLENAME_CSXX.mpa` (e.g., `SAMPLE01_CS09.mpa` for a Confidence Score of 0.9).
+
+For this vignette, we will use the mock data bundled with the package, copying it to a temporary directory to comply with CRAN/Bioconductor file system policies.
+
+```{r prep_data}
+# 1. Create a temporary project directory
+proj_dir <- file.path(tempdir(), "karioCaS_Tutorial")
+dir.create(file.path(proj_dir, "000_mpa_original"), recursive = TRUE)
+
+# 2. Locate and copy the bundled mock data
+mock_data_path <- system.file("extdata/your_project_name/000_mpa_original", package = "karioCaS")
+mock_files <- list.files(mock_data_path, full.names = TRUE)
+file.copy(mock_files, file.path(proj_dir, "000_mpa_original"))
+
+print(paste("Project Directory initialized at:", proj_dir))
+```
+
+---
+
+## 2. Data Harmonization
+
+The first step is to import the multiple stringency outputs into a cohesive Bioconductor `TreeSummarizedExperiment` (TSE) object. This step parses the taxonomic strings, infers the phylogenetic ranks, and standardizes the matrices.
+
+```{r import_data}
+# Import data and generate the TSE object (Step 000)
+tse_object <- import_karioCaS(project_dir = proj_dir)
+
+# The object is now ready for Bioconductor-native downstream analysis if desired
+tse_object
+```
+
+*Note: This function automatically creates a `000_karioCaS_input_matrix` folder containing the `.rds` object and a human-readable `.tsv` audit trail.*
+
+---
+
+## 3. Visual Exploration (Steps 001 to 005)
+
+karioCaS shines in its ability to generate publication-ready PDFs to visually inspect the behavior of taxa as stringency increases. All plotting functions automatically read from the harmonized data and save their outputs into dynamically generated subfolders.
+
+```r
+# Note: In an active R session, these commands will generate high-quality 
+# PDF panels in your project directory.
+
+# Evaluate how many taxa and reads "survive" as stringency increases
+taxa_retention(project_dir = proj_dir)
+
+# Evaluate taxonomic depth and Parent-to-Child resolution 
+taxa_resolution(project_dir = proj_dir, parent_level = "Genus", child_level = "Species")
+
+# Generate abundance heatmaps showing taxa extinction patterns at a given CS
+heatmaps_karioCaS(project_dir = proj_dir, analysis_rank = "Species", confidence_score = 40)
+```
+
+---
+
+## 4. Objective Thresholding: The Stability Index (SI)
+
+While visual exploration is crucial, choosing the optimal Confidence Score manually introduces subjectivity. 
+
+karioCaS implements the **Stability Index (SI)**, an adaptation of the Kneedle Algorithm. It analyzes the exponential decay curve of taxa retention and mathematically identifies the "elbow" (Primary SI). This is the precise point of maximum deflection—where the cost of increasing stringency (losing true taxa) eclipses the benefit (removing false-positive k-mer noise). It also identifies Secondary SIs to help separate closely related biological noise.
+
+```{r optimize_cs}
+# Calculate the Stability Index for all domains at the Species level
+audit_df <- optimize_CS(project_dir = proj_dir, tax_level = "Species")
+
+# View the mathematical assessment for the Primary SIs
+head(audit_df[audit_df$SI_Type == "Primary_SI", c("Sample", "Domain", "CS", "Taxa_Count", "Distance")])
+```
+
+The `optimize_CS()` function saves an objective audit trail (`.rds` and `.tsv`) and generates PDFs highlighting the mathematical elbows on the decay curves.
+
+---
+
+## 5. The Ultimate Biological Mosaic
+
+Once the optimal thresholds are defined mathematically, we extract the surviving taxa. Since Archaea might require a CS of 0.20 while Bacteria requires a CS of 0.40, `karioCaS` allows you to create a "Mosaic" `.mpa` file using specific thresholds for each domain.
+
+By setting the arguments to `"auto"`, the package natively reads the `optimize_CS` audit file and applies the mathematically optimal *Primary SI* for each domain.
+
+```{r retrieve_taxa}
+# Generate the final mosaic using automated mathematical thresholds
+retrieve_selected_taxa(
+  project_dir = proj_dir,
+  tax_level = "Species",
+  CS_B = "auto",       # Will pull the Primary SI for Bacteria
+  CS_A = "secondary",  # Attempts to pull a Secondary SI (or fallbacks to Primary)
+  CS_E = 40,           # Manual override (strictly CS40)
+  CS_V = 0             # Manual fallback (CS0)
+)
+```
+
+The resulting `SAMPLENAME_karioCaS_Mosaic.mpa` file, saved in the `1000_final_selection` folder, is a highly refined, high-confidence taxonomic profile, scrubbed of statistical noise and ready for downstream ecological or clinical analysis.
+
+```{r cleanup, include=FALSE}
+# Clean up temporary directory
+unlink(proj_dir, recursive = TRUE)
+```

@@ -2,7 +2,7 @@
 % Please edit documentation in R/kariocas_style.R
 \name{plot_kariocas_empty}
 \alias{plot_kariocas_empty}
-\title{Generate a Standard "No Data" Plot (Skeleton Style)}
+\title{Generate a Standard "No Data" Plot}
 \usage{
 plot_kariocas_empty(
   title_text = "No Data",
@@ -11,6 +11,15 @@ plot_kariocas_empty(
   y_label = NULL
 )
 }
+\arguments{
+\item{title_text}{String for the plot title.}
+
+\item{subtitle_text}{String for the plot subtitle.}
+
+\item{x_label}{String for the x-axis label.}
+
+\item{y_label}{String for the y-axis label.}
+}
 \description{
-Generate a Standard "No Data" Plot (Skeleton Style)
+Generate a Standard "No Data" Plot
 }

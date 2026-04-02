@@ -85,6 +85,7 @@ get_kariocas_linetypes <- function() {
 
 #' Format numbers with K/M suffixes
 #' @export
+#' @param x A numeric vector to format.
 label_k_number <- function(x) {
   scales::label_number(scale_cut = scales::cut_short_scale())(x)
 }
@@ -92,6 +93,7 @@ label_k_number <- function(x) {
 #' Smart Number Formatter for Logs
 #' Default uses comma for thousands to avoid conflict with decimal dot.
 #' @export
+#' @param x A numeric vector to format.
 label_kariocas_auto <- function(x) {
   format(x, scientific = FALSE, big.mark = ",", drop0trailing = TRUE)
 }
@@ -141,6 +143,10 @@ scale_x_kariocas_log10 <- function(labels = label_kariocas_auto, ...) {
 
 #' Generate a Standard "No Data" Plot
 #' @export
+#' @param title_text String for the plot title.
+#' @param subtitle_text String for the plot subtitle.
+#' @param x_label String for the x-axis label.
+#' @param y_label String for the y-axis label.
 plot_kariocas_empty <- function(title_text = "No Data",
                                 subtitle_text = NULL,
                                 x_label = NULL,
@@ -174,6 +180,8 @@ get_kariocas_dims <- function() {
 
 #' karioCaS Publication Theme
 #' @export
+#' @param base_size Base font size.
+#' @param base_family Base font family.
 theme_kariocas <- function(base_size = 12, base_family = "sans") {
   ggplot2::theme_classic(base_size = base_size, base_family = base_family) +
     ggplot2::theme(

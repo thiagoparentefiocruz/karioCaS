@@ -3,8 +3,7 @@
 \name{scale_y_kariocas_log10}
 \alias{scale_y_kariocas_log10}
 \alias{scale_x_kariocas_log10}
-\title{Log10 Scale with Smart Integer Formatting
-NOW FLEXIBLE: Accepts a 'labels' argument to override the default.}
+\title{Log10 Scale with Smart Integer Formatting}
 \usage{
 scale_y_kariocas_log10(labels = label_kariocas_auto, ...)
 
@@ -17,5 +16,4 @@ scale_x_kariocas_log10(labels = label_kariocas_auto, ...)
 }
 \description{
 Log10 Scale with Smart Integer Formatting
-NOW FLEXIBLE: Accepts a 'labels' argument to override the default.
 }

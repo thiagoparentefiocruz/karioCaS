@@ -6,6 +6,9 @@
 \usage{
 label_k_number(x)
 }
+\arguments{
+\item{x}{A numeric vector to format.}
+}
 \description{
 Format numbers with K/M suffixes
 }

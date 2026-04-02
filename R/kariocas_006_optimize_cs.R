@@ -56,7 +56,7 @@ optimize_CS <- function(project_dir, tax_level = "Species") {
   }
   
   SAMPLES <- unique(df_proc$sample)
-  DOMAINS <- names(kariocas_colors$domains)
+  DOMAINS <- names(get_kariocas_colors("domains"))
   
   audit_list <- list()
   
@@ -186,8 +186,7 @@ optimize_CS <- function(project_dir, tax_level = "Species") {
         
         # Actual Data Curve
         ggplot2::geom_line(color = "black", linewidth = 1) +
-        ggplot2::geom_point(color = "black", size = 2.5, shape = kariocas_shapes$ranks[["Level Taxa"]]) +
-        
+        ggplot2::geom_point(color = "black", size = 2.5, shape = get_kariocas_shapes("ranks")[["Level Taxa"]]) +        
         # Primary SI Point Highlight
         ggplot2::geom_point(
           data = calc_df %>% dplyr::filter(CS == primary_cs),
@@ -201,7 +200,7 @@ optimize_CS <- function(project_dir, tax_level = "Species") {
         ggplot2::labs(
           title = dom,
           subtitle = sub_txt,
-          x = kariocas_labels$y_confidence,
+          x = labels_vec$y_confidence,
           y = "**% Retained**"
         ) +
         theme_kariocas()
@@ -225,7 +224,8 @@ optimize_CS <- function(project_dir, tax_level = "Species") {
       file_name <- paste0(samp, "_Optimize_CS_", tax_level, ".pdf")
       save_path <- file.path(output_dir, file_name)
       
-      ggplot2::ggsave(save_path, final_layout, width = kariocas_dims$width, height = kariocas_dims$height)
+      dims <- get_kariocas_dims()
+      ggplot2::ggsave(save_path, final_layout, width = dims$width, height = dims$height)
       log_msg("    -> Generated Plot: ", file_name)
     }
   }

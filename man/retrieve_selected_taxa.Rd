@@ -7,14 +7,14 @@
 retrieve_selected_taxa(
   project_dir,
   tax_level = NULL,
-  CS_A,
-  reads_min_A,
-  CS_B,
-  reads_min_B,
-  CS_E,
-  reads_min_E,
-  CS_V,
-  reads_min_V
+  CS_A = "auto",
+  reads_min_A = 0,
+  CS_B = "auto",
+  reads_min_B = 0,
+  CS_E = "auto",
+  reads_min_E = 0,
+  CS_V = "auto",
+  reads_min_V = 0
 )
 }
 \arguments{
@@ -22,25 +22,26 @@ retrieve_selected_taxa(
 
 \item{tax_level}{Specific taxonomic level to filter (e.g., "Species", "Genus"). If NULL, keeps all levels.}
 
-\item{CS_A}{Character/Numeric. CS suffix for Archaea (e.g., 06, 6, 60).}
+\item{CS_A}{Character/Numeric. CS for Archaea: "auto", "secondary", or numeric value. Default: "auto".}
 
-\item{reads_min_A}{Integer. Min reads for Archaea.}
+\item{reads_min_A}{Integer. Min reads for Archaea. Default: 0.}
 
-\item{CS_B}{Character/Numeric. CS suffix for Bacteria.}
+\item{CS_B}{Character/Numeric. CS for Bacteria: "auto", "secondary", or numeric value. Default: "auto".}
 
-\item{reads_min_B}{Integer. Min reads for Bacteria.}
+\item{reads_min_B}{Integer. Min reads for Bacteria. Default: 0.}
 
-\item{CS_E}{Character/Numeric. CS suffix for Eukaryota.}
+\item{CS_E}{Character/Numeric. CS for Eukaryota: "auto", "secondary", or numeric value. Default: "auto".}
 
-\item{reads_min_E}{Integer. Min reads for Eukaryota.}
+\item{reads_min_E}{Integer. Min reads for Eukaryota. Default: 0.}
 
-\item{CS_V}{Character/Numeric. CS suffix for Viruses.}
+\item{CS_V}{Character/Numeric. CS for Viruses: "auto", "secondary", or numeric value. Default: "auto".}
 
-\item{reads_min_V}{Integer. Min reads for Viruses.}
+\item{reads_min_V}{Integer. Min reads for Viruses. Default: 0.}
 }
 \description{
 This function creates a "biological mosaic" for each sample using 'karioCaS_TSE.rds'.
-It applies smart matching for CS values (e.g., input 04 matches CS40) and generates
-the final hybrid .mpa files with detailed logging.
+It seamlessly integrates with the Stability Index (SI) audit file from Step 006.
+Users can specify "auto" (Primary SI), "secondary" (Secondary SI), or manual numeric
+thresholds for each domain.
 ENFORCES strict > 0 filter to prevent zero-count taxa from appearing in output.
 }

@@ -20,11 +20,8 @@ RoxygenNote: 7.3.3
 Imports: 
     ggplot2,
     patchwork,
-    cowplot,
     UpSetR,
-    reshape2,
     dplyr,
-    magrittr,
     readr,
     stringr,
     tidyr,
@@ -33,8 +30,15 @@ Imports:
     ggtext,
     SummarizedExperiment,
     TreeSummarizedExperiment,
-    S4Vectors
+    S4Vectors,
+    forcats,
+    fs,
+    tibble,
+    methods,
+    rlang
 Suggests: 
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
+Config/testthat/edition: 3

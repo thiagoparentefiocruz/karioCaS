@@ -154,16 +154,16 @@ retrieve_selected_taxa <- function(project_dir,
             
             if (nrow(audit_sub) > 0) {
               if (user_val == "auto") {
-                requested_val <- audit_sub$CS[audit_sub$SI_Type == "Primary_SI"]
+                requested_val <- audit_sub$CS[which(audit_sub$SI_Type == "Primary_SI")]
                 info_tag <- "[SI: Primary]"
               } else if (user_val == "secondary") {
-                sec_val <- audit_sub$CS[audit_sub$SI_Type == "Secondary_SI_1"]
+                sec_val <- audit_sub$CS[which(audit_sub$SI_Type == "Secondary_SI_1")]
                 if (length(sec_val) > 0 && !is.na(sec_val[1])) {
                   requested_val <- sec_val
                   info_tag <- "[SI: Secondary]"
                 } else {
                   # Fallback if no secondary exists
-                  requested_val <- audit_sub$CS[audit_sub$SI_Type == "Primary_SI"]
+                  requested_val <- audit_sub$CS[which(audit_sub$SI_Type == "Primary_SI")]
                   info_tag <- "[SI: Fallback to Primary]"
                   log_msg(sprintf("    [INFO] No Secondary SI for %s in %s. Using Primary.", dom, samp))
                 }
