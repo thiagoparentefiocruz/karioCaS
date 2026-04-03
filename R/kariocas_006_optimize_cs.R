@@ -15,6 +15,22 @@
 #' @importFrom ggplot2 ggplot aes geom_line geom_point geom_vline geom_text scale_x_continuous scale_y_continuous labs annotate theme element_text coord_cartesian
 #' @importFrom patchwork plot_layout plot_annotation
 #' @importFrom readr write_tsv write_rds
+#' @examples
+#' # Get the path to the included toy dataset
+#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#'
+#' # Example usage:
+#' # Run the Stability Index (SI) optimization for the Species level
+#' optimal_thresholds <- optimize_CS(
+#'   project_dir = toy_project,
+#'   tax_level = "Species"
+#' )
+#' 
+#' # You can also run it for other taxonomic levels, like Genus
+#' optimal_thresholds_genus <- optimize_CS(
+#'   project_dir = toy_project,
+#'   tax_level = "Genus"
+#' )
 
 optimize_CS <- function(project_dir, tax_level = "Species") {
   

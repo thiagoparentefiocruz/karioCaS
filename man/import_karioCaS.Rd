@@ -17,3 +17,10 @@ Reads Kraken2 MPA-style reports directly from the '000_mpa_original' folder.
 Parses filenames like 'Sample_CSXX.mpa' (e.g., PILO_CS09.mpa).
 Generates a detailed log file for traceability.
 }
+\examples{
+# Pega o caminho interno do pacote onde está o toy dataset
+toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+
+# Roda a função de verdade para o fiscal ver
+import_karioCaS(project_dir = toy_project)
+}

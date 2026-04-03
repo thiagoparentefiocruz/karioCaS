@@ -3,7 +3,6 @@
 #' Single Source of Truth for visual elements in karioCaS.
 #' Follows Nature/Science publication standards.
 #'
-#' @export
 #' @importFrom ggplot2 theme_classic theme element_text element_blank element_line element_rect margin unit guide_legend ggplot annotate labs scale_y_continuous scale_x_continuous
 #' @importFrom scales label_number cut_short_scale log_trans
 #' @importFrom ggtext element_markdown
@@ -51,7 +50,7 @@
 #'
 #' @param type Character. The palette to retrieve: "ranks", "domains", "special", "upset", or "heatmap".
 #' @return A named vector or list of colors.
-#' @export
+#' @noRd
 get_kariocas_colors <- function(type = c("ranks", "domains", "special", "upset", "heatmap")) {
   type <- match.arg(type)
   return(.kariocas_internal_colors[[type]])
@@ -63,7 +62,7 @@ get_kariocas_colors <- function(type = c("ranks", "domains", "special", "upset",
 #'
 #' @param type Character. Currently supports "ranks".
 #' @return A named vector of shape integers.
-#' @export
+#' @noRd
 get_kariocas_shapes <- function(type = "ranks") {
   if (type == "ranks") return(.kariocas_internal_shapes$ranks)
   stop("Shape type not recognized.")
@@ -74,7 +73,7 @@ get_kariocas_shapes <- function(type = "ranks") {
 #' Retrieves standard linetypes for read and taxa retention plots.
 #'
 #' @return A named character vector of linetypes.
-#' @export
+#' @noRd
 get_kariocas_linetypes <- function() {
   return(.kariocas_internal_linetypes)
 }
@@ -84,23 +83,23 @@ get_kariocas_linetypes <- function() {
 # ==============================================================================
 
 #' Format numbers with K/M suffixes
-#' @export
 #' @param x A numeric vector to format.
+#' @noRd
 label_k_number <- function(x) {
   scales::label_number(scale_cut = scales::cut_short_scale())(x)
 }
 
 #' Smart Number Formatter for Logs
 #' Default uses comma for thousands to avoid conflict with decimal dot.
-#' @export
 #' @param x A numeric vector to format.
+#' @noRd
 label_kariocas_auto <- function(x) {
   format(x, scientific = FALSE, big.mark = ",", drop0trailing = TRUE)
 }
 
 #' Standard Axis Labels with HTML/Markdown Styling
 #' Uses ggtext syntax for mixing fonts and sizes.
-#' @export
+#' @noRd
 get_kariocas_labels <- function() {
   list(
     y_log10_retained = "**% Retained**<br><span style='font-size:8pt;color:grey40'>(axis scaled to log<sub>10</sub>)</span>",
@@ -117,7 +116,7 @@ get_kariocas_labels <- function() {
 #'
 #' @param labels A formatting function or vector. Defaults to label_kariocas_auto.
 #' @param ... Other arguments passed to scale_y_continuous
-#' @export
+#' @noRd
 scale_y_kariocas_log10 <- function(labels = label_kariocas_auto, ...) {
   ggplot2::scale_y_continuous(
     trans = "log10",
@@ -128,7 +127,7 @@ scale_y_kariocas_log10 <- function(labels = label_kariocas_auto, ...) {
 }
 
 #' @rdname scale_y_kariocas_log10
-#' @export
+#' @noRd
 scale_x_kariocas_log10 <- function(labels = label_kariocas_auto, ...) {
   ggplot2::scale_x_continuous(
     trans = "log10",
@@ -142,11 +141,11 @@ scale_x_kariocas_log10 <- function(labels = label_kariocas_auto, ...) {
 # ==============================================================================
 
 #' Generate a Standard "No Data" Plot
-#' @export
 #' @param title_text String for the plot title.
 #' @param subtitle_text String for the plot subtitle.
 #' @param x_label String for the x-axis label.
 #' @param y_label String for the y-axis label.
+#' @noRd
 plot_kariocas_empty <- function(title_text = "No Data",
                                 subtitle_text = NULL,
                                 x_label = NULL,
@@ -173,15 +172,15 @@ plot_kariocas_empty <- function(title_text = "No Data",
 # ==============================================================================
 
 #' Standard Output Dimensions (A4 Landscape)
-#' @export
+#' @noRd
 get_kariocas_dims <- function() {
   list(width = 11.69, height = 8.27)
 }
 
 #' karioCaS Publication Theme
-#' @export
 #' @param base_size Base font size.
 #' @param base_family Base font family.
+#' @noRd
 theme_kariocas <- function(base_size = 12, base_family = "sans") {
   ggplot2::theme_classic(base_size = base_size, base_family = base_family) +
     ggplot2::theme(

@@ -5,12 +5,18 @@
 #'
 #' @param project_dir Path to the project root.
 #'
+#' @return Generates PDF plots saved in the project directory and returns a data frame invisibly.
 #' @export
 #' @importFrom dplyr filter mutate select distinct case_when pull
 #' @importFrom tidyr pivot_wider
 #' @importFrom UpSetR upset
 #' @importFrom grDevices pdf dev.off
 #' @importFrom grid grid.text gpar
+#' @examples
+#' # Get the path to the included toy dataset
+#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#'
+#' # upset_kariocas(project_dir = toy_project)
 
 upset_kariocas <- function(project_dir) {
 

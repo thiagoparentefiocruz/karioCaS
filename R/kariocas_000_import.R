@@ -16,6 +16,12 @@
 #' @importFrom SummarizedExperiment colData rowData
 #' @importFrom S4Vectors DataFrame
 #' @importFrom readr write_tsv
+#' @examples
+#' # Pega o caminho interno do pacote onde está o toy dataset
+#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#' 
+#' # Roda a função de verdade para o fiscal ver
+#' import_karioCaS(project_dir = toy_project)
 
 import_karioCaS <- function(project_dir) {
 

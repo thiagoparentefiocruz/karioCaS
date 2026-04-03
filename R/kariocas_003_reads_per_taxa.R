@@ -10,6 +10,7 @@
 #' @param x_max_euk Integer. Max X-axis value for Eukaryota in Rare Taxa plot (default: 10).
 #' @param x_max_vir Integer. Max X-axis value for Viruses in Rare Taxa plot (default: 10).
 #'
+#' @return Generates PDF plots saved in the project directory and returns a data frame invisibly.
 #' @export
 #' @importFrom dplyr filter mutate select group_by summarise arrange pull n distinct case_when left_join bind_rows
 #' @importFrom tidyr pivot_longer
@@ -17,6 +18,22 @@
 #' @importFrom patchwork plot_layout plot_annotation
 #' @importFrom scales percent label_number breaks_pretty
 #' @importFrom ggtext element_markdown
+#' @examples
+#' # Get the path to the included toy dataset
+#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#'
+#' # Example 1: Basic usage (defaults to Species and x_max = 10 for all domains)
+#' # reads_per_taxa(
+#' #   project_dir = toy_project
+#' # )
+#' 
+#' # Example 2: Analyzing Genus level and adjusting the X-axis zoom for Rare Taxa
+#' # reads_per_taxa(
+#' #   project_dir = toy_project,
+#' #   analysis_level = "Genus",
+#' #   x_max_bac = 50,
+#' #   x_max_vir = 5
+#' # )
 
 reads_per_taxa <- function(project_dir,
                            analysis_level = "Species",

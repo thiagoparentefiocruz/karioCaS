@@ -11,6 +11,7 @@
 #' @param confidence_score Target CS to define "Survivors" (e.g., 90). If NULL, uses the highest available.
 #' @param top_n Number of top survivors to display individually (default: 20).
 #'
+#' @return Generates PDF plots saved in the project directory and returns a data frame invisibly.
 #' @export
 #' @importFrom dplyr filter mutate select group_by summarise arrange slice_head pull case_when ungroup left_join bind_rows distinct n_distinct rename
 #' @importFrom tidyr complete pivot_longer pivot_wider replace_na
@@ -19,6 +20,22 @@
 #' @importFrom forcats fct_reorder fct_inorder
 #' @importFrom tibble column_to_rownames
 #' @importFrom SummarizedExperiment rowData
+#' @examples
+#' # Get the path to the included toy dataset
+#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#'
+#' # Example 1: Basic usage (defaults to Genus, highest CS, and top 20 taxa)
+#' # heatmaps_karioCaS(
+#' #   project_dir = toy_project
+#' # )
+#' 
+#' # Example 2: Advanced usage (Targeting Species level at CS 50, showing top 30 taxa)
+#' # heatmaps_karioCaS(
+#' #   project_dir = toy_project,
+#' #   analysis_rank = "Species",
+#' #   confidence_score = 50,
+#' #   top_n = 30
+#' # )
 
 heatmaps_karioCaS <- function(project_dir,
                               analysis_rank = NULL,

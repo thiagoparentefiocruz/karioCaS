@@ -7,7 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
+```{r setup_knitr, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -16,6 +16,7 @@ knitr::opts_chunk$set(
 )
 ```
 
+***
 ## Introduction
 
 Metagenomic classification using k-mer based tools like Kraken2 is incredibly fast, but it is notoriously prone to false-positive assignments. The standard approach of applying a single, global Confidence Score (CS) threshold across an entire sample is fundamentally flawed: **one size does not fit all**. Biological domains (Bacteria, Archaea, Viruses, and Eukaryota) have vastly different database representations, genome sizes, and k-mer uniqueness.
@@ -26,7 +27,7 @@ Metagenomic classification using k-mer based tools like Kraken2 is incredibly fa
 library(karioCaS)
 ```
 
----
+***
 
 ## 1. Setting up the Environment
 
@@ -49,7 +50,7 @@ file.copy(mock_files, file.path(proj_dir, "000_mpa_original"))
 print(paste("Project Directory initialized at:", proj_dir))
 ```
 
----
+***
 
 ## 2. Data Harmonization
 
@@ -65,13 +66,13 @@ tse_object
 
 *Note: This function automatically creates a `000_karioCaS_input_matrix` folder containing the `.rds` object and a human-readable `.tsv` audit trail.*
 
----
+***
 
 ## 3. Visual Exploration (Steps 001 to 005)
 
 karioCaS shines in its ability to generate publication-ready PDFs to visually inspect the behavior of taxa as stringency increases. All plotting functions automatically read from the harmonized data and save their outputs into dynamically generated subfolders.
 
-```r
+```{r visual_exploration, eval=FALSE}
 # Note: In an active R session, these commands will generate high-quality 
 # PDF panels in your project directory.
 
@@ -85,7 +86,7 @@ taxa_resolution(project_dir = proj_dir, parent_level = "Genus", child_level = "S
 heatmaps_karioCaS(project_dir = proj_dir, analysis_rank = "Species", confidence_score = 40)
 ```
 
----
+***
 
 ## 4. Objective Thresholding: The Stability Index (SI)
 
@@ -103,7 +104,7 @@ head(audit_df[audit_df$SI_Type == "Primary_SI", c("Sample", "Domain", "CS", "Tax
 
 The `optimize_CS()` function saves an objective audit trail (`.rds` and `.tsv`) and generates PDFs highlighting the mathematical elbows on the decay curves.
 
----
+***
 
 ## 5. The Ultimate Biological Mosaic
 
@@ -128,4 +129,12 @@ The resulting `SAMPLENAME_karioCaS_Mosaic.mpa` file, saved in the `1000_final_se
 ```{r cleanup, include=FALSE}
 # Clean up temporary directory
 unlink(proj_dir, recursive = TRUE)
+```
+
+***
+
+## Session Info
+
+```{r sessionInfo, echo=FALSE}
+sessionInfo()
 ```

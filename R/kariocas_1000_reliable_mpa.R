@@ -17,11 +17,25 @@
 #' @param CS_V Character/Numeric. CS for Viruses: "auto", "secondary", or numeric value. Default: "auto".
 #' @param reads_min_V Integer. Min reads for Viruses. Default: 0.
 #'
+#' @return Writes a refined mosaic '.mpa' file to the '1000_final_selection' folder and invisibly returns the filtered data frame.
 #' @export
 #' @importFrom readr read_rds write_tsv write_delim
 #' @importFrom dplyr filter mutate select group_by summarise bind_rows rename left_join case_when
 #' @importFrom stringr str_detect str_remove str_extract
 #' @importFrom SummarizedExperiment assay rowData
+#' @examples
+#' # Get the path to the included toy dataset
+#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#'
+#' # Example usage:
+#' # retrieve_selected_taxa(
+#' #   project_dir = toy_project,
+#' #   tax_level = "Species",
+#' #   CS_B = "auto",
+#' #   CS_A = 20,
+#' #   CS_E = 40,
+#' #   CS_V = 0
+#' # )
 
 retrieve_selected_taxa <- function(project_dir,
                                    tax_level = NULL,

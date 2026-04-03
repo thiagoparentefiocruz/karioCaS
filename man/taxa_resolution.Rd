@@ -20,9 +20,29 @@ taxa_resolution(
 
 \item{top_n}{Number of top taxa to display per domain (default: 10).}
 }
+\value{
+Generates PDF plots saved in the project directory and returns a data frame invisibly.
+}
 \description{
 Creates stacked bar plots showing the resolution efficiency between a Parent Rank
 (e.g., Genus) and a Child Rank (e.g., Species).
 Performs strict subtraction: (Parent Row Value) - (Sum of Child Row Values).
 Uses max() for Parent aggregation to prevent double-counting of children in cumulative data.
+}
+\examples{
+# Get the path to the included toy dataset
+toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+
+# Example 1: Basic usage (defaults to Genus vs Species, showing top 10)
+# taxa_resolution(
+#   project_dir = toy_project
+# )
+
+# Example 2: Analyzing resolution from Family to Genus, showing top 5
+# taxa_resolution(
+#   project_dir = toy_project,
+#   parent_level = "Family",
+#   child_level = "Genus",
+#   top_n = 5
+# )
 }

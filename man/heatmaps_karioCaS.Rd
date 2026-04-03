@@ -20,10 +20,30 @@ heatmaps_karioCaS(
 
 \item{top_n}{Number of top survivors to display individually (default: 20).}
 }
+\value{
+Generates PDF plots saved in the project directory and returns a data frame invisibly.
+}
 \description{
 Creates Relative Abundance (%) heatmaps focused on survivors at a specific
 Confidence Score. "Elite" survivors are clustered by similarity, while lost taxa
 are aggregated into "Loss Groups" at the bottom.
 Includes robust data enrichment and count consolidation to prevent abundance dilution.
 Now explicitly handles domains with zero survivors at target CS (showing only loss groups).
+}
+\examples{
+# Get the path to the included toy dataset
+toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+
+# Example 1: Basic usage (defaults to Genus, highest CS, and top 20 taxa)
+# heatmaps_karioCaS(
+#   project_dir = toy_project
+# )
+
+# Example 2: Advanced usage (Targeting Species level at CS 50, showing top 30 taxa)
+# heatmaps_karioCaS(
+#   project_dir = toy_project,
+#   analysis_rank = "Species",
+#   confidence_score = 50,
+#   top_n = 30
+# )
 }

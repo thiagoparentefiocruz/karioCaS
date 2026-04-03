@@ -9,7 +9,17 @@ taxa_retention(project_dir)
 \arguments{
 \item{project_dir}{Root path of the project.}
 }
+\value{
+Generates PDF plots saved in the project directory and returns a data frame invisibly.
+}
 \description{
 Executes read retention analysis based on Confidence Score (Kraken/Bracken).
 Generates detailed logs including baseline stats for QC.
+}
+\examples{
+# Get the path to the included toy dataset
+toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+
+# Run the taxa retention analysis for the entire project
+# taxa_retention(project_dir = toy_project)
 }

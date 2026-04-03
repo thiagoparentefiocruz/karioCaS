@@ -5,6 +5,7 @@
 #'
 #' @param project_dir Root path of the project.
 #'
+#' @return Generates PDF plots saved in the project directory and returns a data frame invisibly.
 #' @export
 #' @importFrom dplyr filter select group_by summarise mutate left_join arrange rename bind_rows pull distinct
 #' @importFrom tidyr pivot_longer
@@ -12,6 +13,12 @@
 #' @importFrom patchwork plot_layout plot_annotation
 #' @importFrom scales label_number
 #' @importFrom ggtext element_markdown
+#' @examples
+#' # Get the path to the included toy dataset
+#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#'
+#' # Run the taxa retention analysis for the entire project
+#' # taxa_retention(project_dir = toy_project)
 
 taxa_retention <- function(project_dir) {
 

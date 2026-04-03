@@ -38,10 +38,27 @@ retrieve_selected_taxa(
 
 \item{reads_min_V}{Integer. Min reads for Viruses. Default: 0.}
 }
+\value{
+Writes a refined mosaic '.mpa' file to the '1000_final_selection' folder and invisibly returns the filtered data frame.
+}
 \description{
 This function creates a "biological mosaic" for each sample using 'karioCaS_TSE.rds'.
 It seamlessly integrates with the Stability Index (SI) audit file from Step 006.
 Users can specify "auto" (Primary SI), "secondary" (Secondary SI), or manual numeric
 thresholds for each domain.
 ENFORCES strict > 0 filter to prevent zero-count taxa from appearing in output.
+}
+\examples{
+# Get the path to the included toy dataset
+toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+
+# Example usage:
+# retrieve_selected_taxa(
+#   project_dir = toy_project,
+#   tax_level = "Species",
+#   CS_B = "auto",
+#   CS_A = 20,
+#   CS_E = 40,
+#   CS_V = 0
+# )
 }

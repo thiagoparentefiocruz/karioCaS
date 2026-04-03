@@ -21,3 +21,20 @@ maximizes the removal of statistical noise while minimizing the loss of true tax
 It also identifies subsequent local maxima (Secondary SIs) which may represent
 biological noise separation.
 }
+\examples{
+# Get the path to the included toy dataset
+toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+
+# Example usage:
+# Run the Stability Index (SI) optimization for the Species level
+optimal_thresholds <- optimize_CS(
+  project_dir = toy_project,
+  tax_level = "Species"
+)
+
+# You can also run it for other taxonomic levels, like Genus
+optimal_thresholds_genus <- optimize_CS(
+  project_dir = toy_project,
+  tax_level = "Genus"
+)
+}

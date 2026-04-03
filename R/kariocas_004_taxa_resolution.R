@@ -10,6 +10,7 @@
 #' @param child_level Name of the child rank (default: "Species").
 #' @param top_n Number of top taxa to display per domain (default: 10).
 #'
+#' @return Generates PDF plots saved in the project directory and returns a data frame invisibly.
 #' @export
 #' @importFrom dplyr filter mutate select group_by summarise arrange slice_head left_join bind_rows distinct case_when pull rename
 #' @importFrom tidyr pivot_longer replace_na
@@ -18,6 +19,22 @@
 #' @importFrom scales label_number
 #' @importFrom ggtext element_markdown
 #' @importFrom SummarizedExperiment rowData
+#' @examples
+#' # Get the path to the included toy dataset
+#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#' 
+#' # Example 1: Basic usage (defaults to Genus vs Species, showing top 10)
+#' # taxa_resolution(
+#' #   project_dir = toy_project
+#' # )
+#' 
+#' # Example 2: Analyzing resolution from Family to Genus, showing top 5
+#' # taxa_resolution(
+#' #   project_dir = toy_project,
+#' #   parent_level = "Family",
+#' #   child_level = "Genus",
+#' #   top_n = 5
+#' # )
 
 taxa_resolution <- function(project_dir,
                             parent_level = "Genus",

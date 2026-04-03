@@ -26,7 +26,27 @@ reads_per_taxa(
 
 \item{x_max_vir}{Integer. Max X-axis value for Viruses in Rare Taxa plot (default: 10).}
 }
+\value{
+Generates PDF plots saved in the project directory and returns a data frame invisibly.
+}
 \description{
 Performs a saturation analysis by progressively filtering taxa with low read counts.
 Generates two views: "Saturation" (Log scale overview) and "Rare_Taxa" (Linear scale focus on low counts).
+}
+\examples{
+# Get the path to the included toy dataset
+toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+
+# Example 1: Basic usage (defaults to Species and x_max = 10 for all domains)
+# reads_per_taxa(
+#   project_dir = toy_project
+# )
+
+# Example 2: Analyzing Genus level and adjusting the X-axis zoom for Rare Taxa
+# reads_per_taxa(
+#   project_dir = toy_project,
+#   analysis_level = "Genus",
+#   x_max_bac = 50,
+#   x_max_vir = 5
+# )
 }
