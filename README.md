@@ -1,5 +1,7 @@
 # karioCaS 🧬
 
+[![DOI](https://zenodo.org/badge/1141170581.svg)](https://doi.org/10.5281/zenodo.19392342)
+
 **Kraken Confidence Scores for Reliable Domain-Specific Microbiota
 Inference and Discovery**
 
