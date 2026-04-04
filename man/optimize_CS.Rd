@@ -2,39 +2,49 @@
 % Please edit documentation in R/kariocas_006_optimize_cs.R
 \name{optimize_CS}
 \alias{optimize_CS}
-\title{Optimize Confidence Score using Stability Index (SI) (Step 006)}
+\title{Optimize Confidence Score using Multi-Strategy Stability Index (SI) (Step 006)}
 \usage{
-optimize_CS(project_dir, tax_level = "Species")
+optimize_CS(
+  project_dir,
+  tax_level = "Species",
+  method = c("dynamic", "segmented", "manual"),
+  manual_toll = 1
+)
 }
 \arguments{
-\item{project_dir}{Path to the project root.}
+\item{project_dir}{Character. Path to the project root.}
 
-\item{tax_level}{Taxonomic rank to analyze and optimize (default: "Species").}
+\item{tax_level}{Character. Taxonomic rank to analyze and optimize (default: "Species").}
+
+\item{method}{Character. Strategy to calculate the SI: "dynamic" (default), "segmented", or "manual".}
+
+\item{manual_toll}{Numeric or named list. Acceptable step-wise loss percentage. Used only if method = "manual" (default: 1.0).}
 }
 \value{
 A data.frame containing the full SI audit trail (invisibly).
 }
 \description{
-Applies an adaptation of the Kneedle Algorithm to objectively identify the optimal
-Confidence Score (CS) threshold. It finds the "elbow" point (Primary SI) that
-maximizes the removal of statistical noise while minimizing the loss of true taxa.
-It also identifies subsequent local maxima (Secondary SIs) which may represent
-biological noise separation.
+Objectively identifies the optimal Confidence Score (CS) threshold to separate 
+statistical noise from true biological signal. It replaces legacy geometric approaches 
+with a versatile multi-strategy mathematical engine:
+- "dynamic": Adapts to the baseline noise of the sample (stricter, ideal for pathogens).
+- "segmented": Uses a Broken-Stick regression model to find regime shifts (ideal for ecology/dark matter).
+- "manual": Allows expert-defined acceptable loss tolls globally or per domain.
 }
 \examples{
 # Get the path to the included toy dataset
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
-# Example usage:
-# Run the Stability Index (SI) optimization for the Species level
-optimal_thresholds <- optimize_CS(
+# Default usage (Dynamic Toll - Ideal for clinical/pathogen focus)
+optimal_dynamic <- optimize_CS(
   project_dir = toy_project,
   tax_level = "Species"
 )
 
-# You can also run it for other taxonomic levels, like Genus
-optimal_thresholds_genus <- optimize_CS(
+# Segmented Regression (Ideal for ecology and biological dark matter)
+optimal_segmented <- optimize_CS(
   project_dir = toy_project,
-  tax_level = "Genus"
+  tax_level = "Species",
+  method = "segmented"
 )
 }

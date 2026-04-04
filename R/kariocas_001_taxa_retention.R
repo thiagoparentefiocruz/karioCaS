@@ -63,7 +63,7 @@ taxa_retention <- function(project_dir) {
   }
 
   SAMPLES <- unique(df_proc$sample)
-  DOMAINS <- names(kariocas_colors$domains)
+  DOMAINS <- names(get_kariocas_colors("domains"))
 
   fmt_num <- function(x) format(x, big.mark = ",", scientific = FALSE)
 
@@ -191,7 +191,7 @@ taxa_retention <- function(project_dir) {
       ggplot2::theme(legend.position = "bottom")
 
     fname_all <- paste0(samp, "_CS_Retention_All_Levels.pdf")
-    ggplot2::ggsave(file.path(output_dir, fname_all), layout_all, width = kariocas_dims$width, height = kariocas_dims$height)
+    ggplot2::ggsave(file.path(output_dir, fname_all), layout_all, width = get_kariocas_dims()$width, height = get_kariocas_dims()$height)
     log_msg("    -> Generated: ", fname_all)
 
     # ==========================================================================
@@ -292,7 +292,7 @@ taxa_retention <- function(project_dir) {
         ggplot2::theme(legend.position = "bottom")
 
       fname_rank <- paste0(samp, "_CS_Retention_", fname_suffix, ".pdf")
-      ggplot2::ggsave(file.path(output_dir, fname_rank), layout_rank, width = kariocas_dims$width, height = kariocas_dims$height)
+      ggplot2::ggsave(file.path(output_dir, fname_rank), layout_rank, width = get_kariocas_dims()$width, height = get_kariocas_dims()$height)
       log_msg("    -> Generated: ", fname_rank)
     }
   }

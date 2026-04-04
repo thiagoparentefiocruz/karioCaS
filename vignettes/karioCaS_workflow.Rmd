@@ -92,17 +92,21 @@ heatmaps_karioCaS(project_dir = proj_dir, analysis_rank = "Species", confidence_
 
 While visual exploration is crucial, choosing the optimal Confidence Score manually introduces subjectivity. 
 
-karioCaS implements the **Stability Index (SI)**, an adaptation of the Kneedle Algorithm. It analyzes the exponential decay curve of taxa retention and mathematically identifies the "elbow" (Primary SI). This is the precise point of maximum deflection—where the cost of increasing stringency (losing true taxa) eclipses the benefit (removing false-positive k-mer noise). It also identifies Secondary SIs to help separate closely related biological noise.
+karioCaS implements a **Multi-Strategy Stability Index (SI)** engine. Instead of relying on rigid geometric formulas, it analyzes step-wise loss and regime shifts to mathematically identify the optimal threshold (Primary SI). It offers three distinct strategies:
+
+* **Dynamic (Default):** Calculates the basal noise (attrition) of the sample's tail and dynamically identifies the threshold. Ideal for reducing false-positives (e.g. pathogen detection).
+* **Segmented:** Uses a Broken-Stick regression model to find regime shifts. A balanced tolerance between false-positives and false-negatives (e.g. ecology investigations and discovering biological dark matter).
+* **Manual:** Allows the user to define an acceptable step-wise loss toll per domain.
 
 ```{r optimize_cs}
-# Calculate the Stability Index for all domains at the Species level
-audit_df <- optimize_CS(project_dir = proj_dir, tax_level = "Species")
+# Calculate the Stability Index for all domains using the default Dynamic method
+audit_df <- optimize_CS(project_dir = proj_dir, tax_level = "Species", method = "dynamic")
 
 # View the mathematical assessment for the Primary SIs
-head(audit_df[audit_df$SI_Type == "Primary_SI", c("Sample", "Domain", "CS", "Taxa_Count", "Distance")])
+head(audit_df[audit_df$SI_Type == "Primary_SI", c("Sample", "Domain", "CS", "Taxa_Count", "Step_Loss_Pct")])
 ```
 
-The `optimize_CS()` function saves an objective audit trail (`.rds` and `.tsv`) and generates PDFs highlighting the mathematical elbows on the decay curves.
+The `optimize_CS()` function saves an objective audit trail (`.rds` and `.tsv`) and generates PDFs highlighting the mathematical shift on the decay curves.
 
 ***
 

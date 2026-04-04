@@ -105,7 +105,7 @@ heatmaps_karioCaS <- function(project_dir,
     dplyr::filter(!is.na(Taxon_Name))
 
   SAMPLES <- unique(df_proc$sample)
-  DOMAINS <- names(kariocas_colors$domains)
+  DOMAINS <- names(get_kariocas_colors("domains"))
 
   # Custom "Barro" Palette (White -> Yellow -> Orange -> Red -> Deep Terracotta)
   barro_palette <- c("#FFFFFF", "#FFEDA0", "#FEB24C", "#F03B20", "#800026")
@@ -325,7 +325,7 @@ heatmaps_karioCaS <- function(project_dir,
     file_name <- paste0(samp, "_Heatmap_", analysis_rank, "_CS", sprintf("%02d", target_cs), ".pdf")
     save_path <- file.path(output_dir, file_name)
 
-    ggplot2::ggsave(save_path, p, width = kariocas_dims$height, height = kariocas_dims$width)
+    ggplot2::ggsave(save_path, p, width = get_kariocas_dims()$height, height = get_kariocas_dims()$width)
     log_msg("    -> Generated: ", file_name)
   }
 

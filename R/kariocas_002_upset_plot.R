@@ -54,7 +54,7 @@ upset_kariocas <- function(project_dir) {
   df_long <- .get_tidy_data(project_dir)
 
   SAMPLES <- unique(df_long$sample)
-  DOMAINS <- names(kariocas_colors$domains)
+  DOMAINS <- names(get_kariocas_colors("domains"))
   LEVELS  <- c("Species", "Genus", "Family")
 
   log_msg(">>> Starting UpSet Analysis for ", length(SAMPLES), " samples.")
@@ -109,8 +109,8 @@ upset_kariocas <- function(project_dir) {
         full_path <- file.path(current_out_dir, file_name)
 
         grDevices::pdf(file = full_path,
-                       width = kariocas_dims$width,
-                       height = kariocas_dims$height,
+                       width = get_kariocas_dims()$width,
+                       height = get_kariocas_dims()$height,
                        onefile = FALSE)
 
         tryCatch({
@@ -125,8 +125,8 @@ upset_kariocas <- function(project_dir) {
               sets.x.label = paste("Total", lvl, "per CS"),
               text.scale = c(1.5, 1.5, 1.2, 1.2, 1.5, 1.3),
               mb.ratio = c(0.6, 0.4),
-              main.bar.color = kariocas_colors$upset$main,
-              sets.bar.color = kariocas_colors$upset$sets,
+              main.bar.color = get_kariocas_colors("upset")$main,
+              sets.bar.color = get_kariocas_colors("upset")$sets,
               matrix.color = "grey20",
               shade.color = "grey90"
             )

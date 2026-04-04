@@ -100,7 +100,7 @@ taxa_resolution <- function(project_dir,
     )
 
   SAMPLES <- unique(df_proc$sample)
-  DOMAINS <- names(kariocas_colors$domains)
+  DOMAINS <- names(get_kariocas_colors("domains"))
   CS_LIST <- unique(df_proc$CS)
 
   log_msg(">>> Starting Analysis Loop...")
@@ -251,7 +251,7 @@ taxa_resolution <- function(project_dir,
       file_name <- paste0(samp, "_CS", sprintf("%02d", cs), "_Resolution_", parent_level, "_vs_", child_level, ".pdf")
       save_path <- file.path(output_dir, file_name)
 
-      ggplot2::ggsave(save_path, final_layout, width = kariocas_dims$width, height = kariocas_dims$height)
+      ggplot2::ggsave(save_path, final_layout, width = get_kariocas_dims()$width, height = get_kariocas_dims()$height)
       log_msg("    -> Generated: ", file_name)
     }
   }

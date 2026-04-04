@@ -83,7 +83,7 @@ reads_per_taxa <- function(project_dir,
   }
 
   SAMPLES <- unique(df_proc$sample)
-  DOMAINS <- names(kariocas_colors$domains)
+  DOMAINS <- names(get_kariocas_colors("domains"))
   CS_LIST <- unique(df_proc$CS)
 
   # Template for Saturation calculation (Log Scale)
@@ -135,7 +135,7 @@ reads_per_taxa <- function(project_dir,
             plot_list[[dom]] <- plot_kariocas_empty(
               title_text = dom,
               subtitle_text = "No reads detected",
-              x_label = if(mode=="Saturation") kariocas_labels$x_log10_reads else "**Reads**",
+              x_label = if(mode=="Saturation") get_kariocas_labels()$x_log10_reads else "**Reads**",
               y_label = "**% Retained**"
             )
             next
@@ -208,7 +208,7 @@ reads_per_taxa <- function(project_dir,
             # Manual Styles
             ggplot2::scale_color_manual(values = spec_colors, labels = legend_labels) +
             ggplot2::scale_shape_manual(values = shapes_vec, labels = legend_labels) +
-            ggplot2::scale_linetype_manual(values = kariocas_linetypes, labels = legend_labels) +
+            ggplot2::scale_linetype_manual(values = get_kariocas_linetypes(), labels = legend_labels) +
 
             theme_kariocas() +
 
@@ -234,7 +234,7 @@ reads_per_taxa <- function(project_dir,
             p <- p +
               scale_x_kariocas_log10(breaks = clean_breaks, labels = label_k_number) +
               ggplot2::coord_cartesian(xlim = c(NA, display_limit), ylim = c(0, 1.05), clip = "on") +
-              ggplot2::labs(title = dom, subtitle = subtitle_stats, x = kariocas_labels$x_log10_reads, y = "**% Retained**")
+              ggplot2::labs(title = dom, subtitle = subtitle_stats, x = get_kariocas_labels()$x_log10_reads, y = "**% Retained**")
 
           } else {
             # Rare Taxa Logic (Linear Scale)
@@ -277,7 +277,7 @@ reads_per_taxa <- function(project_dir,
         file_name <- paste0(samp, "_CS", sprintf("%02d", cs), "_Cutoff_", analysis_level, "_", mode, ".pdf")
         save_path <- file.path(output_dir, file_name)
 
-        ggplot2::ggsave(save_path, final_layout, width = kariocas_dims$width, height = kariocas_dims$height)
+        ggplot2::ggsave(save_path, final_layout, width = get_kariocas_dims()$width, height = get_kariocas_dims()$height)
         log_msg("    -> Saved [", mode, "]: ", file_name)
 
       } # End Mode Loop
