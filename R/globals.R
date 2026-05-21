@@ -19,5 +19,5 @@ utils::globalVariables(c(
   "SI_Type", "Sample", "Sample_ID", "Species", "Taxa_Count", "Taxon_Name",
   "Taxonomy", "Taxonomy_Full", "Total_CS_Reads", "Total_Clade_Reads",
   "Wide_Header", "kariocas_colors", "kariocas_dims", "kariocas_labels",
-  "kariocas_linetypes"
+  "kariocas_linetypes", "Step_Loss_Pct"
 ))
