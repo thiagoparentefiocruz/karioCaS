@@ -116,7 +116,7 @@ taxa_retention <- function(project_dir) {
     qc_stats <- baseline_df %>% dplyr::filter(Rank == "Species")
     if (nrow(qc_stats) > 0) {
       log_msg("    > QC STATS (CS00 Baseline):")
-      for(i in 1:nrow(qc_stats)) {
+      for(i in seq_len(nrow(qc_stats))) {
         log_msg("      - ", qc_stats$Domain[i], ": ",
                 fmt_num(qc_stats$Base_Global[i]), " Total Reads | ",
                 fmt_num(qc_stats$Base_Taxa[i]), " Distinct Species")

@@ -112,7 +112,7 @@ import_karioCaS <- function(project_dir) {
       next
     }
 
-    raw <- raw[, 1:2]
+    raw <- raw[, seq_len(2)]
     colnames(raw) <- c("Taxonomy", "Counts")
     raw$Counts <- as.numeric(raw$Counts)
 

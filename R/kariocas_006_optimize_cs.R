@@ -145,7 +145,7 @@ optimize_CS <- function(project_dir, tax_level = "Species", method = c("dynamic"
           best_rss <- Inf
           primary_idx <- 2
           for (i in 3:(n_pts - 2)) {
-            fit_left  <- lm(Pct_Retained ~ CS, data = calc_df[1:i, ])
+            fit_left  <- lm(Pct_Retained ~ CS, data = calc_df[seq_len(i), ])
             fit_right <- lm(Pct_Retained ~ CS, data = calc_df[i:n_pts, ])
             rss_total <- sum(resid(fit_left)^2) + sum(resid(fit_right)^2)
             
