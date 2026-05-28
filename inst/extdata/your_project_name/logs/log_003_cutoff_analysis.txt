@@ -1,7 +1,0 @@
-====================================================
-LOG: 003_CUTOFF_ANALYSIS (Saturation + Rare Taxa)
-PROJECT DIR:  /Users/thiagoparente/Documents/repositorios_github/karioCaS/inst/extdata/your_project_name 
-ANALYSIS LEVEL:  Species 
-RARE TAXA MAX: B= 10 |A= 10 |E= 10 |V= 10 
-====================================================
-[2026-05-28 11:49:09] >>> Loading Data (Auto-detected format)...
