@@ -1,0 +1,5 @@
+====================================================
+LOG: 001_CS_RETENTION_ANALYSIS
+PROJECT DIR: /Users/thiagoparente/Documents/repositorios_github/karioCaS/inst/extdata/your_project_name
+====================================================
+[2026-05-28 11:49:46] >>> Loading Data (Auto-detected format)...

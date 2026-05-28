@@ -3,3 +3,4 @@
 ^LICENSE\.md$
 ^NEWS\.Rmd$
 ^dev$
+^karioCaS\.BiocCheck$
