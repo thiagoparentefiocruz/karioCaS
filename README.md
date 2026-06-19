@@ -40,9 +40,14 @@ YOUR_PROJECT_DIR/
 **File naming rules:**
 1. **SAMPLE:** Any name (DO NOT use underscores `_` in the sample name itself).
 2. **_CS:** **Must** be present.
-3. **XX:** The Confidence Score (e.g., `00` for 0.0, `05` for 0.05, `90` for 0.9).
+3. **XX:** The Confidence Score. karioCaS accepts three equivalent notations:
+   * **Percentage** (recommended): `CS00` = 0.0, `CS40` = 0.4, `CS90` = 0.9, `CS100` = 1.0.
+   * **Legacy 0.1-step shorthand:** the zero-padded `CS00`–`CS10`, where `CS09` = 0.9 and `CS10` = 1.0. *(Note: `CS05` resolves to 0.5, not 0.05.)*
+   * **Explicit decimal:** `CS0.0`, `CS0.05`, `CS0.9`, `CS1.0`.
 
-*Quick note on CS values: A CS = 0.1 means at least 10% of the k-mers from a read must map identically to a genome for assignment. A CS = 0.0 assigns a read if even a single k-mer maps (highest sensitivity, highest noise).*
+*Quick note on CS values: A CS = 0.1 means at least 10% of the k-mers from a read must map identically to a genome for assignment. A CS = 0.0 assigns a read if even a single k-mer maps (highest sensitivity, highest noise); a CS = 1.0 requires every k-mer to agree (maximum stringency).*
+
+*Function arguments such as `confidence_score=` and `CS_B=` accept either a Kraken fraction in `(0, 1]` (e.g. `1.0` for maximum stringency) or a percentage `> 1` (e.g. `40`).*
 
 ## 🛠️ Key Features & Workflow
 

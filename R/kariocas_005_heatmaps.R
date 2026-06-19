@@ -220,7 +220,7 @@
     log_msg("------------------------------------------------")
     log_msg("  Processing Sample: ", samp)
     df_samp <- dplyr::filter(df_proc, .data$sample == samp)
-    max_cs <- max(df_samp$CS, na.rm = TRUE)
+    max_cs <- .safe_max(df_samp$CS, default = 0)
     target_cs <- if (!is.null(confidence_score) && confidence_score <= max_cs) {
         confidence_score
     } else {
@@ -308,6 +308,16 @@ heatmaps_karioCaS <- function(project_dir,
                               confidence_score = NULL,
                               top_n = 20) {
     if (is.null(analysis_rank)) analysis_rank <- "Genus"
+    if (!is.null(confidence_score)) {
+        cs_pct <- .cs_arg_to_percent(confidence_score)
+        if (is.na(cs_pct)) {
+            stop(
+                "Invalid 'confidence_score': ", confidence_score,
+                ". Use a Kraken fraction (0-1) or a percentage (0-100)."
+            )
+        }
+        confidence_score <- cs_pct
+    }
     setup <- .hm_setup(project_dir, analysis_rank, confidence_score)
     df_proc <- .hm_load_and_enrich(project_dir, analysis_rank)
     barro_pal <- c("#FFFFFF", "#FFEDA0", "#FEB24C", "#F03B20", "#800026")

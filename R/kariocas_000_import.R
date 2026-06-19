@@ -34,17 +34,6 @@
 }
 
 #' @noRd
-.imp_normalize_cs <- function(cs_raw, cs_str) {
-    if (cs_raw == 0) {
-        return(0)
-    }
-    if (cs_raw < 10 && nchar(cs_str) == 2 && substr(cs_str, 1, 1) == "0") {
-        return(cs_raw * 10)
-    }
-    cs_raw
-}
-
-#' @noRd
 .imp_read_one_file <- function(f, fname_regex, log_msg) {
     fname <- basename(f)
     matches <- stringr::str_match(fname, fname_regex)
@@ -54,7 +43,14 @@
     }
     samp_name <- matches[1, 2]
     cs_str <- matches[1, 3]
-    cs_val_num <- .imp_normalize_cs(as.numeric(cs_str), cs_str)
+    cs_val_num <- .cs_filename_to_percent(cs_str)
+    if (is.na(cs_val_num)) {
+        log_msg(
+            "WARNING: Skipping file with out-of-range/invalid CS code (",
+            cs_str, "): ", fname
+        )
+        return(NULL)
+    }
     log_msg(
         " -> Reading: ", fname,
         " (interpreted as Sample: ", samp_name, " | CS: ", cs_val_num, ")"
@@ -100,7 +96,7 @@
         stop("No files found.")
     }
     log_msg("FOUND: ", length(files), " potential files.")
-    fname_regex <- "^(.*)_CS([0-9]+)\\.(mpa|txt|report)$"
+    fname_regex <- "^(.*)_CS([0-9]+(?:\\.[0-9]+)?)\\.(mpa|txt|report)$"
     long_data_list <- Filter(Negate(is.null), lapply(files, function(f) {
         .imp_read_one_file(f, fname_regex, log_msg)
     }))
@@ -154,6 +150,7 @@
         tidyr::pivot_wider(
             names_from  = "Col_ID",
             values_from = "Counts",
+            values_fn   = sum,
             values_fill = 0
         )
     count_mat <- as.matrix(mat_df[, -1])
@@ -222,6 +219,7 @@ import_karioCaS <- function(project_dir) {
         tidyr::pivot_wider(
             names_from  = "Col_ID",
             values_from = "Counts",
+            values_fn   = sum,
             values_fill = 0
         )
     count_mat <- as.matrix(mat_df[, -1])

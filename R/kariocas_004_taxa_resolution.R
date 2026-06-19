@@ -67,7 +67,7 @@
         dplyr::filter(.data$Rank == parent_level) |>
         dplyr::group_by(.data$Parent_Name) |>
         dplyr::summarise(
-            Total_Clade_Reads = max(.data$Counts, na.rm = TRUE),
+            Total_Clade_Reads = .safe_max(.data$Counts),
             .groups = "drop"
         ) |>
         dplyr::filter(!is.na(.data$Parent_Name)) |>
@@ -84,7 +84,7 @@
         ) |>
         dplyr::group_by(.data$Parent_Name) |>
         dplyr::summarise(
-            Parent_Cumulative_Total = max(.data$Counts, na.rm = TRUE),
+            Parent_Cumulative_Total = .safe_max(.data$Counts),
             .groups = "drop"
         )
     df_child <- df_dom |>
@@ -110,10 +110,10 @@
 
 #' @noRd
 .txr_audit_log <- function(calc_df, log_msg) {
-    audit <- dplyr::filter(calc_df, .data$Parent_Name == "Limnohabitans")
-    if (nrow(audit) == 0) audit <- calc_df[1, ]
+    # Report the top parent clade (by cumulative reads) as a sanity check.
+    audit <- calc_df[1, ]
     log_msg(sprintf(
-        "    AUDIT [%s]: Genus(Max)=%d | Species(Sum)=%d | Exclusive(Diff)=%d",
+        "    AUDIT [%s]: Parent(Max)=%d | Child(Sum)=%d | Exclusive(Diff)=%d",
         audit$Parent_Name[1],
         audit$Parent_Cumulative_Total[1],
         audit$Child_Sum_Resolved[1],

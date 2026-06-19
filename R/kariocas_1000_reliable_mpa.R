@@ -93,7 +93,7 @@
 .rst_resolve_cs <- function(user_val, dom, samp, audit_df, log_msg) {
     uv <- tolower(as.character(user_val))
     if (!uv %in% c("auto", "secondary")) {
-        return(list(val = as.numeric(uv), tag = "[Manual]"))
+        return(list(val = .cs_arg_to_percent(uv), tag = "[Manual]"))
     }
     if (!is.null(audit_df)) {
         sub <- dplyr::filter(audit_df, .data$Sample == samp, .data$Domain == dom)
@@ -123,22 +123,25 @@
 
 #' @noRd
 .rst_match_column <- function(samp, requested_val, available_suffixes, log_msg) {
+    target_pct <- .cs_arg_to_percent(requested_val)
+    if (is.na(target_pct)) {
+        log_msg(sprintf(
+            "    [ERROR] Invalid CS input (%s) for sample %s.",
+            requested_val, samp
+        ))
+        return(NULL)
+    }
     for (suf in available_suffixes) {
-        suf_num <- tryCatch(as.numeric(suf), warning = function(w) NA_real_)
-        if (is.na(suf_num)) next
-        if (suf_num == requested_val) {
-            return(suf)
-        }
-        if ((requested_val * 10) == suf_num) {
-            return(suf)
-        }
-        if (requested_val == (suf_num * 10)) {
+        # Column suffixes are already stored as canonical integer percent
+        # (e.g. "00", "90", "100"); parse them directly, no re-encoding.
+        suf_pct <- suppressWarnings(as.numeric(suf))
+        if (!is.na(suf_pct) && suf_pct == target_pct) {
             return(suf)
         }
     }
     log_msg(sprintf(
-        "    [ERROR] CS input (Resolved: %s) not matched in available: %s",
-        requested_val, paste(available_suffixes, collapse = ", ")
+        "    [ERROR] CS input (Resolved: %d%%) not matched in available: %s",
+        target_pct, paste(available_suffixes, collapse = ", ")
     ))
     NULL
 }
