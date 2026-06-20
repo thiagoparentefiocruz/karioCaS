@@ -67,7 +67,8 @@
     log_msg(">>> Loading Final Mosaic (1000_final_selection)...")
     mdir <- file.path(project_dir, "1000_final_selection")
     files <- list.files(
-        mdir, pattern = "_karioCaS_Mosaic\\.tsv$", full.names = TRUE
+        mdir,
+        pattern = "_karioCaS_Mosaic\\.tsv$", full.names = TRUE
     )
     if (length(files) == 0) {
         stop(

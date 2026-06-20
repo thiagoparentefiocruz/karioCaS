@@ -1,9 +1,12 @@
 Package: karioCaS
 Title: Kraken Confidence Scores for Reliable Domain-Specific Microbiota Inference and Discovery
-Version: 0.99.7
-Authors@R: 
+Version: 0.99.8
+Authors@R: c(
     person("Thiago", "Parente", , email = "thiago.parente@fiocruz.br", role = c("aut", "cre"),
-           comment = c(ORCID = "0000-0001-7501-726X"))
+           comment = c(ORCID = "0000-0001-7501-726X")),
+    person("Fiocruz", role = "fnd"),
+    person("IOC-Fiocruz", role = "fnd"),
+    person("CAPES", role = "fnd"))
 Description: Provides a comprehensive framework for analyzing Kraken2 metagenomic 
     classification using multiple confidence scores. karioCaS implements a 
     robust comparative approach to evaluate taxonomic stability across different 

@@ -56,7 +56,8 @@ test_that("taxa_resolution default reads the final mosaic", {
         "SUCCESS: Resolution analysis completed."
     )
     pdfs <- list.files(
-        file.path(proj, "004_taxa_resolution"), pattern = "\\.pdf$"
+        file.path(proj, "004_taxa_resolution"),
+        pattern = "\\.pdf$"
     )
     expect_true(any(grepl("Final_Mosaic\\.pdf$", pdfs)))
 

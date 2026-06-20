@@ -97,7 +97,8 @@
     }
     plots <- .grp_overlay_plots(
         overlay, DOMAINS, get_kariocas_labels()$x_log10_reads,
-        "**% Retained**", apply_scales, vlines = vlines
+        "**% Retained**", apply_scales,
+        vlines = vlines
     )
     fname <- paste0(
         grp, "_Group_CS", sprintf("%02d", cs),

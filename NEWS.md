@@ -1,3 +1,11 @@
+# karioCaS 0.99.8
+
+## Changes
+
+* Applied `styler` (4-space indentation, Bioconductor style) across the package
+  for consistent formatting.
+* Added funding (`fnd`) roles to `Authors@R`: Fiocruz, IOC-Fiocruz, and CAPES.
+
 # karioCaS 0.99.7
 
 ## Changes

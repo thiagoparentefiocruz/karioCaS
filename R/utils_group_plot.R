@@ -142,7 +142,8 @@ NULL
             }
             .grp_overlay_domain(
                 df_dom, dom, dom_colors[[dom]],
-                x_lab, y_lab, apply_scales, vline = vl
+                x_lab, y_lab, apply_scales,
+                vline = vl
             )
         }),
         domains

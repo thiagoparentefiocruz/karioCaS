@@ -330,7 +330,8 @@
         log_msg("  Group: ", grp, " (", n_samples, " samples)")
         plots <- .grp_overlay_plots(
             df_g, DOMAINS, lbls$y_confidence, "**% Retained**",
-            apply_scales, vlines = vlines
+            apply_scales,
+            vlines = vlines
         )
         .grp_assemble_2x2(
             plots,
