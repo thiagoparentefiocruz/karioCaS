@@ -7,7 +7,7 @@
 optimize_CS(
   project_dir,
   tax_level = "Species",
-  method = c("dynamic", "segmented", "manual"),
+  method = c("kneedle", "postcliff", "segmented", "dynamic", "manual"),
   manual_toll = 1,
   detail_samples = NULL
 )
@@ -17,8 +17,8 @@ optimize_CS(
 
 \item{tax_level}{Character. Taxonomic rank to analyze (default: \code{"Species"}).}
 
-\item{method}{Character. One of \code{"dynamic"} (default), \code{"segmented"},
-or \code{"manual"}.}
+\item{method}{Character. One of \code{"kneedle"} (default), \code{"postcliff"},
+\code{"segmented"}, \code{"dynamic"}, or \code{"manual"}.}
 
 \item{manual_toll}{Numeric or named list. Acceptable step-wise loss percentage.
 Used only when \code{method = "manual"} (default: 1.0).}
@@ -36,24 +36,36 @@ Invisibly returns a \code{data.frame} with the full SI audit trail.
 }
 \description{
 Objectively identifies the optimal Confidence Score (CS) threshold to separate
-statistical noise from true biological signal using a multi-strategy engine:
+statistical noise from true biological signal using a multi-strategy engine.
+The Primary Stability Index marks the chosen threshold; a Secondary Index, when
+available, offers a more conservative alternative.
 \itemize{
-  \item \code{"dynamic"}: Adapts to baseline noise (ideal for pathogens).
+  \item \code{"kneedle"} (default): Parameter-free elbow detection (point of
+    maximum distance below the start-end chord of the retention curve). It
+    consistently locates the inflection between the steep noise-removal phase
+    and the stable signal floor, regardless of whether the curve starts with a
+    plateau. The Secondary Index is the more conservative post-cliff floor.
+  \item \code{"postcliff"}: First CS at or after the steepest single drop whose
+    step-wise loss falls back within tail noise. More conservative than
+    \code{"kneedle"} (lands deeper in the plateau).
   \item \code{"segmented"}: Broken-stick regression for regime shifts
     (ideal for ecology/dark matter).
+  \item \code{"dynamic"}: First CS whose step-wise loss drops within tail
+    noise. NOTE: on curves with an initial plateau this can stop *before* the
+    main drop; prefer \code{"kneedle"}.
   \item \code{"manual"}: Expert-defined acceptable loss tolls.
 }
 }
 \examples{
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
-# Dynamic method (default - ideal for clinical/pathogen focus)
+# Kneedle elbow detection (default - consistent across domains)
 # optimize_CS(project_dir = toy_project, tax_level = "Species")
 
-# Segmented regression (ideal for ecology / biological dark matter)
+# Conservative post-cliff threshold (deeper into the stable plateau)
 # optimize_CS(
 #   project_dir = toy_project,
 #   tax_level   = "Species",
-#   method      = "segmented"
+#   method      = "postcliff"
 # )
 }

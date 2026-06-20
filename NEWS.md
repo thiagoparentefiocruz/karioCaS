@@ -1,3 +1,20 @@
+# karioCaS 0.99.3
+
+## Changes
+
+* **`optimize_CS()` now defaults to a new `"kneedle"` method** (parameter-free
+  elbow detection) and adds a `"postcliff"` method. The previous default,
+  `"dynamic"`, picked the *first* CS whose step-wise taxa loss fell within tail
+  noise; on domains whose retention curve starts with a plateau (Archaea,
+  Eukaryota, Viruses in typical data) this stopped *before* the main drop,
+  giving an inconsistent optimum (e.g. CS10 for those domains but CS60 for
+  Bacteria). `"kneedle"` locates the inflection between the steep
+  noise-removal phase and the stable signal floor consistently across domains.
+  `"dynamic"`, `"segmented"` and `"manual"` remain available via `method =`.
+* Under `"kneedle"`, the Secondary Stability Index is the more conservative
+  post-cliff floor, so `retrieve_selected_taxa(CS_* = "secondary")` yields a
+  stricter threshold than the Primary.
+
 # karioCaS 0.99.2
 
 ## New Features

@@ -66,10 +66,11 @@ The package follows a logical, step-by-step workflow for metagenomic validation,
 > **Group overlays by default.** `taxa_retention()`, `reads_per_taxa()` and `optimize_CS()` now draw a single figure **per biological group** instead of one set of PDFs per sample: every sample is a faint line and the group mean (± SD) is highlighted, faceted by Domain. Groups are inferred from sample names by stripping trailing digits (e.g. `SAMPLE33`, `SAMPLE34` → group `SAMPLE`; `CONTROL01`, `TREATED01` → `CONTROL`, `TREATED`). Use `detail_samples=` to also render detailed per-sample panels into a `per_sample/` subfolder: `NULL` (default) = group only, `"all"` = every sample, or a comma-separated list such as `"SAMPLE33, SAMPLE45"`.
 
 **3. Objective Thresholding (Step 006)**
-* `optimize_CS()`: The core mathematical engine. Replaces subjective thresholding with a Multi-Strategy Stability Index (SI). The default group overlay also marks each domain's **median Primary SI** as a dashed reference line, turning the figure into a group-wide decision plot. Strategies:
-  * **Dynamic:** Adapts to the basal noise of the sample (ideal for pathogen focus).
-  * **Segmented:** Uses a Broken-Stick regression model to find regime shifts (ideal for ecology/dark matter).
-  * **Manual:** Allows expert-defined acceptable loss tolls.
+* `optimize_CS()`: The core mathematical engine. Replaces subjective thresholding with a Multi-Strategy Stability Index (SI). The default group overlay also marks each domain's **median Primary SI** as a dashed reference line, turning the figure into a group-wide decision plot. Strategies (`method=`):
+  * **Kneedle (default):** Parameter-free elbow detection — finds the inflection between the steep noise-removal phase and the stable signal floor, consistently across domains.
+  * **Post-cliff:** A more conservative threshold deeper in the plateau (first stable CS after the steepest drop).
+  * **Segmented:** Broken-stick regression for regime shifts (ideal for ecology/dark matter).
+  * **Dynamic / Manual:** First CS within tail noise / expert-defined loss tolls.
 
 **4. The Ultimate Biological Mosaic (Step 1000)**
 * `retrieve_selected_taxa()`: Seamlessly integrates with the `optimize_CS` audit file to extract surviving taxa based on domain-specific mathematical thresholds. Generates a highly refined, high-confidence `.mpa` file, scrubbed of statistical noise and ready for downstream analysis.
@@ -106,7 +107,7 @@ import_karioCaS(project_dir = proj_dir)
 
 # 3. Optimize Confidence Scores (Objective Mathematics)
 # Group decision plot + per-sample Stability Index audit (saved as TSV/RDS)
-optimize_CS(project_dir = proj_dir, tax_level = "Species", method = "dynamic")
+optimize_CS(project_dir = proj_dir, tax_level = "Species") # default: Kneedle elbow
 
 # 4. Retrieve the Final Biological Mosaic
 # Uses mathematically optimal thresholds for Bacteria and Archaea, 

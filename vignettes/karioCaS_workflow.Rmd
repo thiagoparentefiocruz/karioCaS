@@ -98,15 +98,16 @@ heatmaps_karioCaS(project_dir = proj_dir, analysis_rank = "Species", confidence_
 
 While visual exploration is crucial, choosing the optimal Confidence Score manually introduces subjectivity. 
 
-karioCaS implements a **Multi-Strategy Stability Index (SI)** engine. Instead of relying on rigid geometric formulas, it analyzes step-wise loss and regime shifts to mathematically identify the optimal threshold (Primary SI). It offers three distinct strategies:
+karioCaS implements a **Multi-Strategy Stability Index (SI)** engine. Instead of relying on rigid geometric formulas, it analyzes the taxa-retention decay curve to mathematically identify the optimal threshold (Primary SI). It offers several strategies via `method=`:
 
-* **Dynamic (Default):** Calculates the basal noise (attrition) of the sample's tail and dynamically identifies the threshold. Ideal for reducing false-positives (e.g. pathogen detection).
-* **Segmented:** Uses a Broken-Stick regression model to find regime shifts. A balanced tolerance between false-positives and false-negatives (e.g. ecology investigations and discovering biological dark matter).
-* **Manual:** Allows the user to define an acceptable step-wise loss toll per domain.
+* **Kneedle (Default):** Parameter-free elbow detection. Locates the inflection point where the steep noise-removal phase gives way to the stable signal floor, consistently across domains even when a curve begins with a plateau.
+* **Post-cliff:** A more conservative threshold that lands deeper in the stable plateau (the first stabilised CS after the steepest drop).
+* **Segmented:** A Broken-Stick regression model that finds regime shifts (e.g. ecology investigations and discovering biological dark matter).
+* **Dynamic / Manual:** First CS whose step-wise loss is within tail noise, or an expert-defined loss toll per domain.
 
 ```{r optimize_cs}
-# Calculate the Stability Index for all domains using the default Dynamic method
-audit_df <- optimize_CS(project_dir = proj_dir, tax_level = "Species", method = "dynamic")
+# Calculate the Stability Index for all domains using the default Kneedle method
+audit_df <- optimize_CS(project_dir = proj_dir, tax_level = "Species")
 
 # View the mathematical assessment for the Primary SIs
 head(audit_df[audit_df$SI_Type == "Primary_SI", c("Sample", "Domain", "CS", "Taxa_Count", "Step_Loss_Pct")])

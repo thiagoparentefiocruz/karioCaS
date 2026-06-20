@@ -134,6 +134,81 @@
     )
 }
 
+#' Tail-derived step-loss tolerance (shared by dynamic & post-cliff)
+#' @noRd
+.ocs_dyn_toll <- function(calc_df) {
+    t <- calc_df$Step_Loss_Pct[calc_df$CS >= 50]
+    t <- t[!is.na(t)]
+    if (length(t) >= 2) {
+        max(mean(t) + 1.5 * stats::sd(t), 0.5)
+    } else {
+        1.0
+    }
+}
+
+#' Kneedle elbow: CS of maximum distance below the start-end chord
+#' @noRd
+.ocs_knee_cs <- function(calc_df) {
+    x <- calc_df$CS
+    y <- calc_df$Pct_Retained
+    n <- length(x)
+    if (n < 3 || x[n] == x[1]) {
+        return(x[min(2, n)])
+    }
+    line <- y[1] + (y[n] - y[1]) * (x - x[1]) / (x[n] - x[1])
+    d <- line - y
+    if (all(is.na(d)) || max(d, na.rm = TRUE) <= 0) {
+        # Non-convex curve: fall back to the steepest single drop.
+        return(x[which.max(calc_df$Step_Loss_Pct)])
+    }
+    x[which.max(d)]
+}
+
+#' Post-cliff stabilisation: first CS at/after the biggest drop within tolerance
+#' @noRd
+.ocs_postcliff_cs <- function(calc_df, toll, max_cs) {
+    pk <- which.max(calc_df$Step_Loss_Pct)
+    idx <- which(
+        seq_len(nrow(calc_df)) >= pk & calc_df$Step_Loss_Pct <= toll
+    )
+    if (length(idx) > 0) calc_df$CS[idx[1]] else max_cs
+}
+
+#' @noRd
+.ocs_method_kneedle <- function(calc_df, max_cs, dom, log_msg) {
+    primary_cs <- .ocs_knee_cs(calc_df)
+    # Secondary SI: the more conservative post-cliff floor, if it is stricter.
+    floor_cs <- .ocs_postcliff_cs(calc_df, .ocs_dyn_toll(calc_df), max_cs)
+    sec1_cs <- if (!is.na(floor_cs) && floor_cs > primary_cs) floor_cs else NA
+    log_msg(sprintf("    %s -> Kneedle Elbow: CS %02d", dom, primary_cs))
+    list(
+        primary_cs = primary_cs,
+        sec1_cs = sec1_cs,
+        sub_txt = sprintf(
+            "Method: Kneedle | Elbow (Primary): CS %02d | Floor (Sec): %s",
+            primary_cs,
+            ifelse(is.na(sec1_cs), "NA", sprintf("%02d", sec1_cs))
+        )
+    )
+}
+
+#' @noRd
+.ocs_method_postcliff <- function(calc_df, max_cs, dom, log_msg) {
+    toll <- .ocs_dyn_toll(calc_df)
+    primary_cs <- .ocs_postcliff_cs(calc_df, toll, max_cs)
+    log_msg(sprintf(
+        "    %s -> Post-cliff (Toll: %.2f%%): CS %02d", dom, toll, primary_cs
+    ))
+    list(
+        primary_cs = primary_cs,
+        sec1_cs = NA,
+        sub_txt = sprintf(
+            "Method: Post-cliff (Toll: %.2f%%) | Primary: CS %02d",
+            toll, primary_cs
+        )
+    )
+}
+
 #' @noRd
 .ocs_tag_audit <- function(calc_df, dom, samp, primary_cs, sec1_cs) {
     calc_df |>
@@ -215,6 +290,8 @@
         )
     n_pts <- nrow(calc_df)
     result <- switch(method,
+        kneedle = .ocs_method_kneedle(calc_df, max_cs, dom, log_msg),
+        postcliff = .ocs_method_postcliff(calc_df, max_cs, dom, log_msg),
         segmented = .ocs_method_segmented(calc_df, n_pts, dom, log_msg),
         dynamic = .ocs_method_dynamic(calc_df, min_cs, max_cs, dom, log_msg),
         manual = .ocs_method_manual(
@@ -324,18 +401,30 @@
 #' Optimize Confidence Score using Multi-Strategy Stability Index (Step 006)
 #'
 #' Objectively identifies the optimal Confidence Score (CS) threshold to separate
-#' statistical noise from true biological signal using a multi-strategy engine:
+#' statistical noise from true biological signal using a multi-strategy engine.
+#' The Primary Stability Index marks the chosen threshold; a Secondary Index, when
+#' available, offers a more conservative alternative.
 #' \itemize{
-#'   \item \code{"dynamic"}: Adapts to baseline noise (ideal for pathogens).
+#'   \item \code{"kneedle"} (default): Parameter-free elbow detection (point of
+#'     maximum distance below the start-end chord of the retention curve). It
+#'     consistently locates the inflection between the steep noise-removal phase
+#'     and the stable signal floor, regardless of whether the curve starts with a
+#'     plateau. The Secondary Index is the more conservative post-cliff floor.
+#'   \item \code{"postcliff"}: First CS at or after the steepest single drop whose
+#'     step-wise loss falls back within tail noise. More conservative than
+#'     \code{"kneedle"} (lands deeper in the plateau).
 #'   \item \code{"segmented"}: Broken-stick regression for regime shifts
 #'     (ideal for ecology/dark matter).
+#'   \item \code{"dynamic"}: First CS whose step-wise loss drops within tail
+#'     noise. NOTE: on curves with an initial plateau this can stop *before* the
+#'     main drop; prefer \code{"kneedle"}.
 #'   \item \code{"manual"}: Expert-defined acceptable loss tolls.
 #' }
 #'
 #' @param project_dir Character. Path to the project root.
 #' @param tax_level Character. Taxonomic rank to analyze (default: \code{"Species"}).
-#' @param method Character. One of \code{"dynamic"} (default), \code{"segmented"},
-#'   or \code{"manual"}.
+#' @param method Character. One of \code{"kneedle"} (default), \code{"postcliff"},
+#'   \code{"segmented"}, \code{"dynamic"}, or \code{"manual"}.
 #' @param manual_toll Numeric or named list. Acceptable step-wise loss percentage.
 #'   Used only when \code{method = "manual"} (default: 1.0).
 #' @param detail_samples Which samples to also render as detailed per-sample SI
@@ -358,18 +447,21 @@
 #' @examples
 #' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 #'
-#' # Dynamic method (default - ideal for clinical/pathogen focus)
+#' # Kneedle elbow detection (default - consistent across domains)
 #' # optimize_CS(project_dir = toy_project, tax_level = "Species")
 #'
-#' # Segmented regression (ideal for ecology / biological dark matter)
+#' # Conservative post-cliff threshold (deeper into the stable plateau)
 #' # optimize_CS(
 #' #   project_dir = toy_project,
 #' #   tax_level   = "Species",
-#' #   method      = "segmented"
+#' #   method      = "postcliff"
 #' # )
 optimize_CS <- function(project_dir,
                         tax_level = "Species",
-                        method = c("dynamic", "segmented", "manual"),
+                        method = c(
+                            "kneedle", "postcliff", "segmented",
+                            "dynamic", "manual"
+                        ),
                         manual_toll = 1.0,
                         detail_samples = NULL) {
     method <- match.arg(method)
