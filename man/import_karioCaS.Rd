@@ -7,20 +7,19 @@
 import_karioCaS(project_dir)
 }
 \arguments{
-\item{project_dir}{Path to the project root. The script expects a '000_mpa_original' folder inside.}
+\item{project_dir}{Path to the project root. Must contain a
+\code{000_mpa_original} subfolder with \code{.mpa} files.}
 }
 \value{
-A TreeSummarizedExperiment object (invisibly).
+Invisibly returns a \code{TreeSummarizedExperiment} object.
 }
 \description{
-Reads Kraken2 MPA-style reports directly from the '000_mpa_original' folder.
-Parses filenames like 'Sample_CSXX.mpa' (e.g., PILO_CS09.mpa).
-Generates a detailed log file for traceability.
+Reads Kraken2 MPA-style reports from the \code{000_mpa_original} folder.
+Parses filenames like \code{SAMPLE_CSXX.mpa} (e.g., \code{PILO_CS09.mpa}).
+Generates a detailed log file for traceability and saves a
+\code{TreeSummarizedExperiment} object for downstream analysis.
 }
 \examples{
-# Pega o caminho interno do pacote onde está o toy dataset
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
-
-# Roda a função de verdade para o fiscal ver
 import_karioCaS(project_dir = toy_project)
 }

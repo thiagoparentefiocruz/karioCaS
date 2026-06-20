@@ -14,36 +14,34 @@ heatmaps_karioCaS(
 \arguments{
 \item{project_dir}{Path to the project root.}
 
-\item{analysis_rank}{Taxonomic rank to analyze. If NULL, defaults to "Genus".}
+\item{analysis_rank}{Taxonomic rank to analyze. Defaults to \code{"Genus"}.}
 
-\item{confidence_score}{Target CS to define "Survivors" (e.g., 90). If NULL, uses the highest available.}
+\item{confidence_score}{Target CS to define survivors (e.g., 90).
+Defaults to the highest available CS.}
 
 \item{top_n}{Number of top survivors to display individually (default: 20).}
 }
 \value{
-Generates PDF plots saved in the project directory and returns a data frame invisibly.
+Invisibly returns \code{NULL}. PDF plots are saved to
+  \code{<project_dir>/005_heatmaps/}.
 }
 \description{
 Creates Relative Abundance (%) heatmaps focused on survivors at a specific
-Confidence Score. "Elite" survivors are clustered by similarity, while lost taxa
-are aggregated into "Loss Groups" at the bottom.
-Includes robust data enrichment and count consolidation to prevent abundance dilution.
-Now explicitly handles domains with zero survivors at target CS (showing only loss groups).
+Confidence Score. "Elite" survivors are clustered by similarity, while lost
+taxa are aggregated into "Loss Groups" at the bottom. Handles domains with
+zero survivors at the target CS (showing only loss groups).
 }
 \examples{
-# Get the path to the included toy dataset
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
-# Example 1: Basic usage (defaults to Genus, highest CS, and top 20 taxa)
-# heatmaps_karioCaS(
-#   project_dir = toy_project
-# )
+# Basic usage (defaults to Genus, highest CS, top 20 taxa)
+# heatmaps_karioCaS(project_dir = toy_project)
 
-# Example 2: Advanced usage (Targeting Species level at CS 50, showing top 30 taxa)
+# Advanced: Species level at CS 50, top 30 taxa
 # heatmaps_karioCaS(
-#   project_dir = toy_project,
-#   analysis_rank = "Species",
+#   project_dir      = toy_project,
+#   analysis_rank    = "Species",
 #   confidence_score = 50,
-#   top_n = 30
+#   top_n            = 30
 # )
 }

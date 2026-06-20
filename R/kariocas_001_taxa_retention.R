@@ -300,16 +300,66 @@
     .tr_save_plots_b(df_calc, DOMAINS, samp, fmt_num, output_dir, log_msg)
 }
 
+#' @noRd
+.tr_group_overlay <- function(df_proc, tax_level, DOMAINS, output_dir, log_msg) {
+    df_rank <- dplyr::filter(df_proc, .data$Rank == tax_level)
+    if (nrow(df_rank) == 0) {
+        log_msg("    [WARNING] No data at rank ", tax_level, "; skipping overlay.")
+        return(invisible(NULL))
+    }
+    df_rank$Group <- .grp_parse_group(df_rank$sample)
+    ret <- .grp_retention_data(df_rank)
+    lbls <- get_kariocas_labels()
+    apply_scales <- function(p) {
+        p +
+            ggplot2::scale_x_continuous(
+                breaks = seq(0, 100, 20), limits = c(0, 100)
+            ) +
+            ggplot2::scale_y_continuous(limits = c(0, 105))
+    }
+    for (grp in unique(ret$Group)) {
+        df_g <- dplyr::filter(ret, .data$Group == grp)
+        n_samples <- dplyr::n_distinct(df_g$sample)
+        log_msg("  Group: ", grp, " (", n_samples, " samples)")
+        plots <- .grp_overlay_plots(
+            df_g, DOMAINS, lbls$y_confidence, "**% Retained**", apply_scales
+        )
+        .grp_assemble_2x2(
+            plots,
+            paste0(grp, " - Group Retention (", tax_level, ")"),
+            paste0(
+                "n = ", n_samples,
+                " samples | thin lines = samples, bold = group mean"
+            ),
+            paste0(grp, "_Group_Retention_", tax_level, ".pdf"),
+            output_dir, log_msg
+        )
+    }
+}
+
 # ==============================================================================
 # EXPORTED FUNCTION
 # ==============================================================================
 
 #' Run Confidence Score Retention Analysis (Step 001)
 #'
-#' Executes read retention analysis based on Confidence Score (Kraken/Bracken).
-#' Generates detailed logs including baseline stats for QC.
+#' Executes taxa retention analysis based on Confidence Score (Kraken/Bracken).
+#' By default it produces a single, low-clutter \strong{group overlay} per
+#' biological group: every sample of the group is drawn as a faint line with the
+#' group mean (\eqn{\pm}SD) highlighted, faceted by Domain. Detailed per-sample
+#' panels (all ranks, taxa vs reads) are written only on request.
+#'
+#' Groups are inferred from sample names by stripping trailing digits
+#' (e.g. \code{SAMPLE33}, \code{SAMPLE34} both belong to group \code{SAMPLE}).
 #'
 #' @param project_dir Root path of the project.
+#' @param tax_level Taxonomic rank used for the group overlay
+#'   (default: \code{"Species"}).
+#' @param detail_samples Which samples to also render as detailed per-sample
+#'   panels. \code{NULL} (default) writes only the group overlay; \code{"all"}
+#'   renders every sample; a comma-separated string such as
+#'   \code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
+#'   Detailed PDFs are saved to a \code{per_sample/} subfolder.
 #'
 #' @return Invisibly returns \code{NULL}. PDF plots are saved to
 #'   \code{<project_dir>/001_taxa_retention/}.
@@ -328,14 +378,27 @@
 #'
 #' # Run the taxa retention analysis for the entire project
 #' # taxa_retention(project_dir = toy_project)
-taxa_retention <- function(project_dir) {
+taxa_retention <- function(project_dir,
+                           tax_level = "Species",
+                           detail_samples = NULL) {
     setup <- .tr_setup(project_dir)
     df_proc <- .tr_load_data(project_dir, setup$log_msg)
     DOMAINS <- names(get_kariocas_colors("domains"))
     SAMPLES <- unique(df_proc$sample)
-    setup$log_msg(">>> Starting Retention Analysis for ", length(SAMPLES), " samples.")
-    for (samp in SAMPLES) {
-        .tr_process_sample(df_proc, samp, DOMAINS, setup$output_dir, setup$log_msg)
+
+    setup$log_msg(">>> Building group overlay(s) at rank: ", tax_level)
+    .tr_group_overlay(df_proc, tax_level, DOMAINS, setup$output_dir, setup$log_msg)
+
+    detail <- .grp_resolve_detail(detail_samples, SAMPLES, setup$log_msg)
+    if (length(detail) > 0) {
+        detail_dir <- file.path(setup$output_dir, "per_sample")
+        if (!dir.exists(detail_dir)) dir.create(detail_dir, recursive = TRUE)
+        setup$log_msg(
+            ">>> Rendering detailed panels for ", length(detail), " sample(s)."
+        )
+        for (samp in detail) {
+            .tr_process_sample(df_proc, samp, DOMAINS, detail_dir, setup$log_msg)
+        }
     }
     setup$log_msg("SUCCESS: Retention analysis completed.")
     invisible(NULL)

@@ -4,20 +4,36 @@
 \alias{taxa_retention}
 \title{Run Confidence Score Retention Analysis (Step 001)}
 \usage{
-taxa_retention(project_dir)
+taxa_retention(project_dir, tax_level = "Species", detail_samples = NULL)
 }
 \arguments{
 \item{project_dir}{Root path of the project.}
+
+\item{tax_level}{Taxonomic rank used for the group overlay
+(default: \code{"Species"}).}
+
+\item{detail_samples}{Which samples to also render as detailed per-sample
+panels. \code{NULL} (default) writes only the group overlay; \code{"all"}
+renders every sample; a comma-separated string such as
+\code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
+Detailed PDFs are saved to a \code{per_sample/} subfolder.}
 }
 \value{
-Generates PDF plots saved in the project directory and returns a data frame invisibly.
+Invisibly returns \code{NULL}. PDF plots are saved to
+  \code{<project_dir>/001_taxa_retention/}.
 }
 \description{
-Executes read retention analysis based on Confidence Score (Kraken/Bracken).
-Generates detailed logs including baseline stats for QC.
+Executes taxa retention analysis based on Confidence Score (Kraken/Bracken).
+By default it produces a single, low-clutter \strong{group overlay} per
+biological group: every sample of the group is drawn as a faint line with the
+group mean (\eqn{\pm}SD) highlighted, faceted by Domain. Detailed per-sample
+panels (all ranks, taxa vs reads) are written only on request.
+}
+\details{
+Groups are inferred from sample names by stripping trailing digits
+(e.g. \code{SAMPLE33}, \code{SAMPLE34} both belong to group \code{SAMPLE}).
 }
 \examples{
-# Get the path to the included toy dataset
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
 # Run the taxa retention analysis for the entire project

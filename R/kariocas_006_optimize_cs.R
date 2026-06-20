@@ -273,6 +273,50 @@
     log_msg("SAVED AUDIT RDS: ", rds_path)
     full_audit
 }
+#' @noRd
+.ocs_group_overlay <- function(full_audit, DOMAINS, tax_level, output_dir, log_msg) {
+    df <- full_audit
+    df$Group <- .grp_parse_group(df$Sample)
+    df$sample <- df$Sample
+    df$x <- df$CS
+    df$y <- df$Pct_Retained
+    prim <- df |>
+        dplyr::filter(.data$SI_Type == "Primary_SI") |>
+        dplyr::group_by(.data$Domain) |>
+        dplyr::summarise(
+            vline = stats::median(.data$CS, na.rm = TRUE), .groups = "drop"
+        )
+    lbls <- get_kariocas_labels()
+    apply_scales <- function(p) {
+        p +
+            ggplot2::scale_x_continuous(
+                breaks = seq(0, 100, 20), limits = c(0, 100)
+            ) +
+            ggplot2::scale_y_continuous(limits = c(0, 105))
+    }
+    for (grp in unique(df$Group)) {
+        df_g <- dplyr::filter(df, .data$Group == grp)
+        n_samples <- dplyr::n_distinct(df_g$sample)
+        prim_g <- dplyr::filter(prim, .data$Domain %in% unique(df_g$Domain))
+        vlines <- stats::setNames(prim_g$vline, prim_g$Domain)
+        log_msg("  Group overlay: ", grp, " (", n_samples, " samples)")
+        plots <- .grp_overlay_plots(
+            df_g, DOMAINS, lbls$y_confidence, "**% Retained**",
+            apply_scales, vlines = vlines
+        )
+        .grp_assemble_2x2(
+            plots,
+            paste0(grp, " - Group CS Optimization (", tax_level, ")"),
+            paste0(
+                "n = ", n_samples,
+                " samples | bold = group mean, dashed = median Primary SI"
+            ),
+            paste0(grp, "_Group_Optimize_CS_", tax_level, ".pdf"),
+            output_dir, log_msg
+        )
+    }
+}
+
 # ==============================================================================
 # EXPORTED FUNCTION
 # ==============================================================================
@@ -294,6 +338,12 @@
 #'   or \code{"manual"}.
 #' @param manual_toll Numeric or named list. Acceptable step-wise loss percentage.
 #'   Used only when \code{method = "manual"} (default: 1.0).
+#' @param detail_samples Which samples to also render as detailed per-sample SI
+#'   panels. \code{NULL} (default) writes only the group overlay; \code{"all"}
+#'   renders every sample; a comma-separated string such as
+#'   \code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
+#'   Detailed PDFs are saved to a \code{per_sample/} subfolder. The numeric SI
+#'   audit is always computed for every sample regardless of this argument.
 #'
 #' @return Invisibly returns a \code{data.frame} with the full SI audit trail.
 #'   TSV and RDS copies are saved to \code{<project_dir>/006_optimize_CS/}.
@@ -304,7 +354,7 @@
 #'   scale_y_continuous labs theme element_text ggsave
 #' @importFrom patchwork plot_layout plot_annotation
 #' @importFrom readr write_tsv write_rds
-#' @importFrom stats lm resid sd
+#' @importFrom stats lm resid sd median
 #' @examples
 #' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 #'
@@ -320,12 +370,15 @@
 optimize_CS <- function(project_dir,
                         tax_level = "Species",
                         method = c("dynamic", "segmented", "manual"),
-                        manual_toll = 1.0) {
+                        manual_toll = 1.0,
+                        detail_samples = NULL) {
     method <- match.arg(method)
     setup <- .ocs_setup(project_dir, tax_level, method)
     df_proc <- .ocs_load_data(project_dir, tax_level, setup$log_msg)
     SAMPLES <- unique(df_proc$sample)
     DOMAINS <- names(get_kariocas_colors("domains"))
+    detail <- .grp_resolve_detail(detail_samples, SAMPLES, setup$log_msg)
+    detail_dir <- file.path(setup$output_dir, "per_sample")
     audit_list <- list()
     setup$log_msg(">>> Starting SI Calculation for ", length(SAMPLES), " samples.")
     for (samp in SAMPLES) {
@@ -340,15 +393,22 @@ optimize_CS <- function(project_dir,
                 )
             }
         )
-        plots <- lapply(results, `[[`, "plot")
         audit_list <- c(audit_list, Filter(Negate(is.null), lapply(results, `[[`, "audit")))
-        if (length(plots) > 0) {
-            .ocs_save_panel(plots, samp, tax_level, setup$output_dir, setup$log_msg)
+        if (samp %in% detail) {
+            if (!dir.exists(detail_dir)) dir.create(detail_dir, recursive = TRUE)
+            plots <- lapply(results, `[[`, "plot")
+            .ocs_save_panel(plots, samp, tax_level, detail_dir, setup$log_msg)
         }
     }
     full_audit <- .ocs_export_audit(
         audit_list, tax_level, setup$output_dir, setup$log_msg
     )
+    if (!is.null(full_audit) && nrow(full_audit) > 0) {
+        setup$log_msg(">>> Building group overlay(s)...")
+        .ocs_group_overlay(
+            full_audit, DOMAINS, tax_level, setup$output_dir, setup$log_msg
+        )
+    }
     setup$log_msg("SUCCESS: CS Optimization completed.")
     invisible(full_audit)
 }

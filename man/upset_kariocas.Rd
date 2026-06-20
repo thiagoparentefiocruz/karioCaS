@@ -10,14 +10,14 @@ upset_kariocas(project_dir)
 \item{project_dir}{Path to the project root.}
 }
 \value{
-Generates PDF plots saved in the project directory and returns a data frame invisibly.
+Invisibly returns \code{NULL}. PDF plots are saved to
+  \code{<project_dir>/002_UpSetComparison_Plots/}.
 }
 \description{
-"karioCaS never are upset!"
-Generates UpSet plots with detailed logging.
+"karioCaS never are upset!" Generates UpSet plots showing taxon persistence
+across Confidence Score levels, with detailed logging.
 }
 \examples{
-# Get the path to the included toy dataset
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
 # upset_kariocas(project_dir = toy_project)

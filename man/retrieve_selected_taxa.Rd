@@ -20,45 +20,46 @@ retrieve_selected_taxa(
 \arguments{
 \item{project_dir}{Path to the project root.}
 
-\item{tax_level}{Specific taxonomic level to filter (e.g., "Species", "Genus"). If NULL, keeps all levels.}
+\item{tax_level}{Taxonomic level to filter (e.g., \code{"Species"}).
+If \code{NULL}, all levels are retained.}
 
-\item{CS_A}{Character/Numeric. CS for Archaea: "auto", "secondary", or numeric value. Default: "auto".}
+\item{CS_A}{Character or numeric. CS for Archaea:
+\code{"auto"}, \code{"secondary"}, or a numeric value. Default: \code{"auto"}.}
 
-\item{reads_min_A}{Integer. Min reads for Archaea. Default: 0.}
+\item{reads_min_A}{Integer. Minimum reads for Archaea. Default: 0.}
 
-\item{CS_B}{Character/Numeric. CS for Bacteria: "auto", "secondary", or numeric value. Default: "auto".}
+\item{CS_B}{Character or numeric. CS for Bacteria. Default: \code{"auto"}.}
 
-\item{reads_min_B}{Integer. Min reads for Bacteria. Default: 0.}
+\item{reads_min_B}{Integer. Minimum reads for Bacteria. Default: 0.}
 
-\item{CS_E}{Character/Numeric. CS for Eukaryota: "auto", "secondary", or numeric value. Default: "auto".}
+\item{CS_E}{Character or numeric. CS for Eukaryota. Default: \code{"auto"}.}
 
-\item{reads_min_E}{Integer. Min reads for Eukaryota. Default: 0.}
+\item{reads_min_E}{Integer. Minimum reads for Eukaryota. Default: 0.}
 
-\item{CS_V}{Character/Numeric. CS for Viruses: "auto", "secondary", or numeric value. Default: "auto".}
+\item{CS_V}{Character or numeric. CS for Viruses. Default: \code{"auto"}.}
 
-\item{reads_min_V}{Integer. Min reads for Viruses. Default: 0.}
+\item{reads_min_V}{Integer. Minimum reads for Viruses. Default: 0.}
 }
 \value{
-Writes a refined mosaic '.mpa' file to the '1000_final_selection' folder and invisibly returns the filtered data frame.
+Invisibly returns \code{TRUE}. Mosaic \code{.mpa} and \code{.tsv}
+  files are saved to \code{<project_dir>/1000_final_selection/}.
 }
 \description{
-This function creates a "biological mosaic" for each sample using 'karioCaS_TSE.rds'.
-It seamlessly integrates with the Stability Index (SI) audit file from Step 006.
-Users can specify "auto" (Primary SI), "secondary" (Secondary SI), or manual numeric
-thresholds for each domain.
-ENFORCES strict > 0 filter to prevent zero-count taxa from appearing in output.
+Creates a "biological mosaic" for each sample using the
+\code{karioCaS_TSE.rds} object from Step 000 and, optionally, the
+Stability Index audit from Step 006. Supports \code{"auto"},
+\code{"secondary"}, or manual numeric thresholds per domain.
+Enforces a strict \code{> 0} read filter to prevent zero-count taxa.
 }
 \examples{
-# Get the path to the included toy dataset
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
-# Example usage:
 # retrieve_selected_taxa(
 #   project_dir = toy_project,
-#   tax_level = "Species",
-#   CS_B = "auto",
-#   CS_A = 20,
-#   CS_E = 40,
-#   CS_V = 0
+#   tax_level   = "Species",
+#   CS_B        = "auto",
+#   CS_A        = 20,
+#   CS_E        = 40,
+#   CS_V        = 0
 # )
 }

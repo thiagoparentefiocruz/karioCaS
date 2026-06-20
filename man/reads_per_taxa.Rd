@@ -10,43 +10,49 @@ reads_per_taxa(
   x_max_bac = 10,
   x_max_arc = 10,
   x_max_euk = 10,
-  x_max_vir = 10
+  x_max_vir = 10,
+  detail_samples = NULL
 )
 }
 \arguments{
 \item{project_dir}{Path to the project root.}
 
-\item{analysis_level}{Taxonomic rank to analyze (default: "Species").}
+\item{analysis_level}{Taxonomic rank to analyze (default: \code{"Species"}).}
 
-\item{x_max_bac}{Integer. Max X-axis value for Bacteria in Rare Taxa plot (default: 10).}
+\item{x_max_bac}{Integer. Max X-axis for Bacteria Rare Taxa plot (default: 10).}
 
-\item{x_max_arc}{Integer. Max X-axis value for Archaea in Rare Taxa plot (default: 10).}
+\item{x_max_arc}{Integer. Max X-axis for Archaea Rare Taxa plot (default: 10).}
 
-\item{x_max_euk}{Integer. Max X-axis value for Eukaryota in Rare Taxa plot (default: 10).}
+\item{x_max_euk}{Integer. Max X-axis for Eukaryota Rare Taxa plot (default: 10).}
 
-\item{x_max_vir}{Integer. Max X-axis value for Viruses in Rare Taxa plot (default: 10).}
+\item{x_max_vir}{Integer. Max X-axis for Viruses Rare Taxa plot (default: 10).}
+
+\item{detail_samples}{Which samples to also render as detailed per-sample
+panels. \code{NULL} (default) writes only the group overlays; \code{"all"}
+renders every sample; a comma-separated string such as
+\code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
+Detailed PDFs are saved to a \code{per_sample/} subfolder.}
 }
 \value{
-Generates PDF plots saved in the project directory and returns a data frame invisibly.
+Invisibly returns \code{NULL}. PDF plots are saved to
+  \code{<project_dir>/003_cutoffs/}.
 }
 \description{
-Performs a saturation analysis by progressively filtering taxa with low read counts.
-Generates two views: "Saturation" (Log scale overview) and "Rare_Taxa" (Linear scale focus on low counts).
+Performs a saturation analysis by progressively filtering taxa with low read
+counts. Generates two views: "Saturation" (log scale overview) and
+"Rare_Taxa" (linear scale focus on low counts).
 }
 \examples{
-# Get the path to the included toy dataset
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
-# Example 1: Basic usage (defaults to Species and x_max = 10 for all domains)
-# reads_per_taxa(
-#   project_dir = toy_project
-# )
+# Basic usage (defaults to Species, x_max = 10 for all domains)
+# reads_per_taxa(project_dir = toy_project)
 
-# Example 2: Analyzing Genus level and adjusting the X-axis zoom for Rare Taxa
+# Genus level with custom Rare Taxa zoom
 # reads_per_taxa(
-#   project_dir = toy_project,
+#   project_dir    = toy_project,
 #   analysis_level = "Genus",
-#   x_max_bac = 50,
-#   x_max_vir = 5
+#   x_max_bac      = 50,
+#   x_max_vir      = 5
 # )
 }

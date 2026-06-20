@@ -1,5 +1,24 @@
 # karioCaS 0.99.2
 
+## New Features
+
+* **Group overlay plots are now the default output** of `taxa_retention()`
+  (001), `reads_per_taxa()` (003) and `optimize_CS()` (006). Instead of one set
+  of PDFs per sample, each function draws a single figure per biological group
+  in which every sample is a faint line and the group mean (+/-SD band) is
+  highlighted, faceted by Domain. `optimize_CS()` additionally marks each
+  domain's median Primary Stability Index as a dashed reference line. This
+  drastically reduces the number of generated PDFs and makes group-level trends
+  obvious at a glance.
+* Groups are inferred from sample names by stripping trailing digits
+  (e.g. SAMPLE33, SAMPLE34 -> group SAMPLE; CONTROL01, TREATED01 -> CONTROL,
+  TREATED).
+* New `detail_samples` argument on those three functions restores detailed
+  per-sample panels on demand: `NULL` (default) draws only the group overlay,
+  `"all"` renders every sample, and a comma-separated string such as
+  `"SAMPLE33, SAMPLE45"` renders just those. Detailed PDFs are written to a
+  `per_sample/` subfolder.
+
 ## Bug Fixes
 
 * **Confidence Score = 1.0 is now handled correctly.** Filenames using the

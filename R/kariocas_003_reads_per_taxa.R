@@ -247,6 +247,88 @@
     }
 }
 
+#' @noRd
+.rpt_group_domain_data <- function(df_grp, cs, dom, mode, cutoffs_sat, rare_limits) {
+    df_cs_dom <- dplyr::filter(
+        df_grp, .data$CS == cs, .data$Domain == dom, .data$Counts > 0
+    )
+    samples <- unique(df_cs_dom$sample)
+    rows <- lapply(samples, function(s) {
+        df_s <- dplyr::filter(df_cs_dom, .data$sample == s)
+        tr <- sum(df_s$Counts)
+        tt <- nrow(df_s)
+        if (tr == 0 || tt == 0) {
+            return(NULL)
+        }
+        cutoffs <- if (mode == "Saturation") {
+            cutoffs_sat[cutoffs_sat <= max(df_s$Counts)]
+        } else {
+            seq(1, rare_limits[[dom]], by = 1)
+        }
+        if (length(cutoffs) == 0) {
+            return(NULL)
+        }
+        st <- .rpt_calc_stats(df_s, cutoffs, tr, tt)
+        data.frame(
+            sample = s, Domain = dom,
+            x = st$Cutoff, y = st$Ret_Taxa_Pct * 100
+        )
+    })
+    dplyr::bind_rows(rows)
+}
+
+#' @noRd
+.rpt_group_overlay <- function(df_proc, CS_LIST, DOMAINS, modes, analysis_level,
+                               cutoff_template, rare_limits, output_dir, log_msg) {
+    df_proc$Group <- .grp_parse_group(df_proc$sample)
+    cutoffs_sat <- cutoff_template[cutoff_template >= 1]
+    lbls <- get_kariocas_labels()
+    for (grp in unique(df_proc$Group)) {
+        df_grp <- dplyr::filter(df_proc, .data$Group == grp)
+        n_samples <- dplyr::n_distinct(df_grp$sample)
+        log_msg("  Group: ", grp, " (", n_samples, " samples)")
+        for (cs in CS_LIST) {
+            for (mode in modes) {
+                df_all <- dplyr::bind_rows(lapply(DOMAINS, function(dom) {
+                    .rpt_group_domain_data(
+                        df_grp, cs, dom, mode, cutoffs_sat, rare_limits
+                    )
+                }))
+                if (nrow(df_all) == 0) next
+                if (mode == "Saturation") {
+                    x_lab <- lbls$x_log10_reads
+                    apply_scales <- function(p) {
+                        p +
+                            scale_x_kariocas_log10(labels = label_k_number) +
+                            ggplot2::coord_cartesian(ylim = c(0, 105))
+                    }
+                } else {
+                    x_lab <- "**Reads**"
+                    apply_scales <- function(p) {
+                        p + ggplot2::coord_cartesian(ylim = c(0, 105))
+                    }
+                }
+                plots <- .grp_overlay_plots(
+                    df_all, DOMAINS, x_lab, "**% Retained**", apply_scales
+                )
+                fname <- paste0(
+                    grp, "_Group_CS", sprintf("%02d", cs),
+                    "_", analysis_level, "_", mode, ".pdf"
+                )
+                .grp_assemble_2x2(
+                    plots,
+                    paste0(grp, " - CS", sprintf("%02d", cs), " | ", mode),
+                    paste0(
+                        "n = ", n_samples, " samples (", analysis_level,
+                        ") | thin = samples, bold = group mean"
+                    ),
+                    fname, output_dir, log_msg
+                )
+            }
+        }
+    }
+}
+
 # ==============================================================================
 # EXPORTED FUNCTION
 # ==============================================================================
@@ -263,6 +345,11 @@
 #' @param x_max_arc Integer. Max X-axis for Archaea Rare Taxa plot (default: 10).
 #' @param x_max_euk Integer. Max X-axis for Eukaryota Rare Taxa plot (default: 10).
 #' @param x_max_vir Integer. Max X-axis for Viruses Rare Taxa plot (default: 10).
+#' @param detail_samples Which samples to also render as detailed per-sample
+#'   panels. \code{NULL} (default) writes only the group overlays; \code{"all"}
+#'   renders every sample; a comma-separated string such as
+#'   \code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
+#'   Detailed PDFs are saved to a \code{per_sample/} subfolder.
 #'
 #' @return Invisibly returns \code{NULL}. PDF plots are saved to
 #'   \code{<project_dir>/003_cutoffs/}.
@@ -295,7 +382,8 @@ reads_per_taxa <- function(project_dir,
                            x_max_bac = 10,
                            x_max_arc = 10,
                            x_max_euk = 10,
-                           x_max_vir = 10) {
+                           x_max_vir = 10,
+                           detail_samples = NULL) {
     setup <- .rpt_setup(
         project_dir, analysis_level,
         x_max_bac, x_max_arc, x_max_euk, x_max_vir
@@ -312,16 +400,28 @@ reads_per_taxa <- function(project_dir,
     CS_LIST <- unique(df_proc$CS)
     cutoff_template <- .rpt_cutoff_template()
     modes <- c("Saturation", "Rare_Taxa")
-    setup$log_msg(">>> Starting Cutoff Analysis for ", length(SAMPLES), " samples.")
-    for (samp in SAMPLES) {
-        setup$log_msg("------------------------------------------------")
-        setup$log_msg("  Processing Sample: ", samp)
-        for (cs in CS_LIST) {
-            .rpt_process_cs(
-                df_proc, samp, cs, DOMAINS, modes,
-                analysis_level, setup$rare_limits,
-                cutoff_template, setup$output_dir, setup$log_msg
-            )
+
+    setup$log_msg(">>> Building group overlay(s)...")
+    .rpt_group_overlay(
+        df_proc, CS_LIST, DOMAINS, modes, analysis_level,
+        cutoff_template, setup$rare_limits, setup$output_dir, setup$log_msg
+    )
+
+    detail <- .grp_resolve_detail(detail_samples, SAMPLES, setup$log_msg)
+    if (length(detail) > 0) {
+        detail_dir <- file.path(setup$output_dir, "per_sample")
+        if (!dir.exists(detail_dir)) dir.create(detail_dir, recursive = TRUE)
+        setup$log_msg(
+            ">>> Rendering detailed panels for ", length(detail), " sample(s)."
+        )
+        for (samp in detail) {
+            for (cs in CS_LIST) {
+                .rpt_process_cs(
+                    df_proc, samp, cs, DOMAINS, modes,
+                    analysis_level, setup$rare_limits,
+                    cutoff_template, detail_dir, setup$log_msg
+                )
+            }
         }
     }
     setup$log_msg("SUCCESS: Cutoff analysis completed.")

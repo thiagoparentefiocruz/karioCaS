@@ -2,49 +2,58 @@
 % Please edit documentation in R/kariocas_006_optimize_cs.R
 \name{optimize_CS}
 \alias{optimize_CS}
-\title{Optimize Confidence Score using Multi-Strategy Stability Index (SI) (Step 006)}
+\title{Optimize Confidence Score using Multi-Strategy Stability Index (Step 006)}
 \usage{
 optimize_CS(
   project_dir,
   tax_level = "Species",
   method = c("dynamic", "segmented", "manual"),
-  manual_toll = 1
+  manual_toll = 1,
+  detail_samples = NULL
 )
 }
 \arguments{
 \item{project_dir}{Character. Path to the project root.}
 
-\item{tax_level}{Character. Taxonomic rank to analyze and optimize (default: "Species").}
+\item{tax_level}{Character. Taxonomic rank to analyze (default: \code{"Species"}).}
 
-\item{method}{Character. Strategy to calculate the SI: "dynamic" (default), "segmented", or "manual".}
+\item{method}{Character. One of \code{"dynamic"} (default), \code{"segmented"},
+or \code{"manual"}.}
 
-\item{manual_toll}{Numeric or named list. Acceptable step-wise loss percentage. Used only if method = "manual" (default: 1.0).}
+\item{manual_toll}{Numeric or named list. Acceptable step-wise loss percentage.
+Used only when \code{method = "manual"} (default: 1.0).}
+
+\item{detail_samples}{Which samples to also render as detailed per-sample SI
+panels. \code{NULL} (default) writes only the group overlay; \code{"all"}
+renders every sample; a comma-separated string such as
+\code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
+Detailed PDFs are saved to a \code{per_sample/} subfolder. The numeric SI
+audit is always computed for every sample regardless of this argument.}
 }
 \value{
-A data.frame containing the full SI audit trail (invisibly).
+Invisibly returns a \code{data.frame} with the full SI audit trail.
+  TSV and RDS copies are saved to \code{<project_dir>/006_optimize_CS/}.
 }
 \description{
-Objectively identifies the optimal Confidence Score (CS) threshold to separate 
-statistical noise from true biological signal. It replaces legacy geometric approaches 
-with a versatile multi-strategy mathematical engine:
-- "dynamic": Adapts to the baseline noise of the sample (stricter, ideal for pathogens).
-- "segmented": Uses a Broken-Stick regression model to find regime shifts (ideal for ecology/dark matter).
-- "manual": Allows expert-defined acceptable loss tolls globally or per domain.
+Objectively identifies the optimal Confidence Score (CS) threshold to separate
+statistical noise from true biological signal using a multi-strategy engine:
+\itemize{
+  \item \code{"dynamic"}: Adapts to baseline noise (ideal for pathogens).
+  \item \code{"segmented"}: Broken-stick regression for regime shifts
+    (ideal for ecology/dark matter).
+  \item \code{"manual"}: Expert-defined acceptable loss tolls.
+}
 }
 \examples{
-# Get the path to the included toy dataset
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
-# Default usage (Dynamic Toll - Ideal for clinical/pathogen focus)
-optimal_dynamic <- optimize_CS(
-  project_dir = toy_project,
-  tax_level = "Species"
-)
+# Dynamic method (default — ideal for clinical/pathogen focus)
+# optimize_CS(project_dir = toy_project, tax_level = "Species")
 
-# Segmented Regression (Ideal for ecology and biological dark matter)
-optimal_segmented <- optimize_CS(
-  project_dir = toy_project,
-  tax_level = "Species",
-  method = "segmented"
-)
+# Segmented regression (ideal for ecology / biological dark matter)
+# optimize_CS(
+#   project_dir = toy_project,
+#   tax_level   = "Species",
+#   method      = "segmented"
+# )
 }
