@@ -85,6 +85,10 @@ taxa_retention(project_dir = proj_dir)
 # subfolder. Use "all", or a comma-separated list of sample names.
 taxa_retention(project_dir = proj_dir, detail_samples = "SAMPLE01")
 
+# Saturation analysis: also computes the optimal MINIMUM READS per domain
+# (elbow of the saturation curve) and writes Reads_Audit_Species.tsv/.rds
+reads_per_taxa(project_dir = proj_dir)
+
 # Evaluate taxonomic depth and Parent-to-Child resolution
 taxa_resolution(project_dir = proj_dir, parent_level = "Genus", child_level = "Species")
 

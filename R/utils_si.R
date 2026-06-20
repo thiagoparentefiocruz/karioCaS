@@ -251,6 +251,51 @@ NULL
     .ocs_tag_audit(calc_df, dom, samp, result$primary_cs, result$sec1_cs)
 }
 
+#' Optimal minimum-reads (saturation-curve elbow) for one sample/domain.
+#'
+#' Operates on the read-count axis in log10 space so the elbow matches the
+#' log-scaled saturation plot. Reuses the generic Kneedle / segmented /
+#' post-cliff detectors. The CS-tail methods ("dynamic"/"manual") are not
+#' meaningful for read counts, so anything other than "postcliff"/"segmented"
+#' falls back to Kneedle.
+#'
+#' @param curve Data frame with columns \code{Cutoff} (>= 1) and
+#'   \code{Taxa_Count} (taxa surviving at that cutoff).
+#' @param method One of \code{"kneedle"}, \code{"postcliff"}, \code{"segmented"}.
+#' @return A list with \code{calc} (the curve with Pct/Step columns),
+#'   \code{opt} (optimal cutoff) and \code{sec} (conservative cutoff or NA),
+#'   or \code{NULL} if the curve is unusable.
+#' @noRd
+.si_reads_elbow <- function(curve, method = "kneedle") {
+    curve <- curve[curve$Cutoff >= 1, , drop = FALSE]
+    curve <- curve[order(curve$Cutoff), , drop = FALSE]
+    if (nrow(curve) < 3 || length(unique(curve$Taxa_Count)) < 2) {
+        return(NULL)
+    }
+    max_taxa <- max(curve$Taxa_Count)
+    calc_df <- data.frame(
+        CS = log10(curve$Cutoff), # x in log space for the elbow geometry
+        Cutoff = curve$Cutoff,
+        Taxa_Count = curve$Taxa_Count,
+        Pct_Retained = curve$Taxa_Count / max_taxa * 100
+    )
+    calc_df$Step_Loss_Pct <- c(0, -diff(calc_df$Pct_Retained))
+    max_x <- max(calc_df$CS)
+    n_pts <- nrow(calc_df)
+    silent <- function(...) invisible(NULL)
+    primary_x <- switch(method,
+        postcliff = .ocs_postcliff_cs(calc_df, .ocs_dyn_toll(calc_df), max_x),
+        segmented = .ocs_method_segmented(calc_df, n_pts, "", silent)$primary_cs,
+        .ocs_knee_cs(calc_df)
+    )
+    opt_cutoff <- calc_df$Cutoff[which.min(abs(calc_df$CS - primary_x))]
+    # Secondary: the conservative post-cliff floor, if it is stricter.
+    floor_x <- .ocs_postcliff_cs(calc_df, .ocs_dyn_toll(calc_df), max_x)
+    floor_cutoff <- calc_df$Cutoff[which.min(abs(calc_df$CS - floor_x))]
+    sec_cutoff <- if (floor_cutoff > opt_cutoff) floor_cutoff else NA_real_
+    list(calc = calc_df, opt = opt_cutoff, sec = sec_cutoff)
+}
+
 #' Bind per-domain audits, write TSV + RDS, and return the full audit.
 #' @noRd
 .si_export_audit <- function(audit_list, tax_level, output_dir, log_msg) {

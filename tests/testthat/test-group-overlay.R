@@ -1,7 +1,6 @@
 # tests/testthat/test-group-overlay.R
 # Tests for the shared group-overlay engine and the detail_samples opt-in
-# wired into taxa_retention() (001), reads_per_taxa() (003) and optimize_CS()
-# (006).
+# wired into taxa_retention() (001) and reads_per_taxa() (003).
 
 test_that(".grp_parse_group strips trailing digits", {
     g <- karioCaS:::.grp_parse_group

@@ -2,15 +2,12 @@
 % Please edit documentation in R/kariocas_003_reads_per_taxa.R
 \name{reads_per_taxa}
 \alias{reads_per_taxa}
-\title{Generate Read Cutoff Saturation Analysis (Step 003)}
+\title{Read Cutoff Saturation Analysis & Optimal Minimum Reads (Step 003)}
 \usage{
 reads_per_taxa(
   project_dir,
   analysis_level = "Species",
-  x_max_bac = 10,
-  x_max_arc = 10,
-  x_max_euk = 10,
-  x_max_vir = 10,
+  method = c("kneedle", "postcliff", "segmented"),
   detail_samples = NULL
 )
 }
@@ -19,40 +16,38 @@ reads_per_taxa(
 
 \item{analysis_level}{Taxonomic rank to analyze (default: \code{"Species"}).}
 
-\item{x_max_bac}{Integer. Max X-axis for Bacteria Rare Taxa plot (default: 10).}
-
-\item{x_max_arc}{Integer. Max X-axis for Archaea Rare Taxa plot (default: 10).}
-
-\item{x_max_euk}{Integer. Max X-axis for Eukaryota Rare Taxa plot (default: 10).}
-
-\item{x_max_vir}{Integer. Max X-axis for Viruses Rare Taxa plot (default: 10).}
+\item{method}{Elbow strategy for the optimal reads. One of \code{"kneedle"}
+(default), \code{"postcliff"} or \code{"segmented"}.}
 
 \item{detail_samples}{Which samples to also render as detailed per-sample
-panels. \code{NULL} (default) writes only the group overlays; \code{"all"}
-renders every sample; a comma-separated string such as
+saturation panels. \code{NULL} (default) writes only the group overlays;
+\code{"all"} renders every sample; a comma-separated string such as
 \code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
 Detailed PDFs are saved to a \code{per_sample/} subfolder.}
 }
 \value{
-Invisibly returns \code{NULL}. PDF plots are saved to
+Invisibly returns a \code{data.frame} with the optimal-reads audit.
+  PDF plots and \code{Reads_Audit_<rank>} files are saved to
   \code{<project_dir>/003_cutoffs/}.
 }
 \description{
-Performs a saturation analysis by progressively filtering taxa with low read
-counts. Generates two views: "Saturation" (log scale overview) and
-"Rare_Taxa" (linear scale focus on low counts).
+Saturation analysis: progressively raises a per-taxon read-count cutoff and
+tracks how many taxa survive, on a log read axis. By default it draws one
+\strong{group overlay} per biological group (every sample a faint line, group
+mean highlighted) and marks each domain's \strong{median optimal minimum
+reads} - the elbow of the saturation curve, found with the same engine used
+for the optimal CS - as a dashed line. The per-sample optimal-reads values are
+written to \code{Reads_Audit_<rank>.tsv}/\code{.rds}, giving a quantitative
+threshold for excluding low-abundance background/false-positive taxa.
+}
+\details{
+The optimal reads is computed \emph{per Confidence Score}, since the
+saturation curve changes with CS; read it off at your chosen optimal CS
+(Step 001).
 }
 \examples{
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
-# Basic usage (defaults to Species, x_max = 10 for all domains)
+# Group saturation overlays + optimal minimum reads (default Kneedle)
 # reads_per_taxa(project_dir = toy_project)
-
-# Genus level with custom Rare Taxa zoom
-# reads_per_taxa(
-#   project_dir    = toy_project,
-#   analysis_level = "Genus",
-#   x_max_bac      = 50,
-#   x_max_vir      = 5
-# )
 }

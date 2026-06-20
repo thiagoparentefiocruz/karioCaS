@@ -63,7 +63,7 @@ The package follows a logical, step-by-step workflow for metagenomic validation,
   * **Segmented:** Broken-stick regression for regime shifts (ideal for ecology/dark matter).
   * **Dynamic / Manual:** First CS within tail noise / expert-defined loss tolls.
 * `taxa_resolution()`: Evaluates taxonomic depth and Parent-to-Child resolution across different scores.
-* `reads_per_taxa()`: Visualizes read distribution efficiency across ranks.
+* `reads_per_taxa()`: Saturation analysis on a log read axis. Computes the **optimal minimum reads** per domain (the saturation-curve elbow, via the same engine as the optimal CS), marks each domain's median on the group plot, and writes `Reads_Audit_<rank>` tables — a quantitative threshold for excluding low-abundance background/false-positive taxa.
 * `upset_kariocas()`: Identifies "transient" vs. "persistent" taxa.
 * `heatmaps_karioCaS()`: Detailed abundance heatmaps showing taxa extinction patterns.
 

@@ -1,3 +1,20 @@
+# karioCaS 0.99.5
+
+## Changes
+
+* **`reads_per_taxa()` now reports an optimal minimum-reads threshold.** Using
+  the same elbow engine as the optimal CS (default `"kneedle"`, on the log read
+  axis), it finds the knee of each domain's saturation curve - the read count
+  above which the stable taxa core persists and below which the rare/background
+  tail is shed. The group overlay marks each domain's median optimal reads with a
+  dashed line, and per-sample values are written to
+  `Reads_Audit_<rank>.tsv`/`.rds`. Together with the optimal CS (Step 001) this
+  gives two quantitative thresholds for excluding background false positives.
+* **The `"Rare_Taxa"` view and the `x_max_*` arguments are removed.** That linear
+  zoom of the 1-10 read region duplicated the low-count end of the saturation
+  curve, which already covers it on the log axis. `reads_per_taxa()` now produces
+  a single saturation plot per CS and gains a `method=` argument.
+
 # karioCaS 0.99.4
 
 ## Changes
