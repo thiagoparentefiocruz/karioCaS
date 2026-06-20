@@ -20,9 +20,11 @@ retrieve_selected_taxa(
 \arguments{
 \item{project_dir}{Path to the project root.}
 
-\item{tax_level}{Taxonomic level to filter (e.g., \code{"Species"}).
-If \code{NULL}, all levels are retained. Also selects which
-\code{SI_Audit}/\code{Reads_Audit} (\code{"Species"} when \code{NULL}).}
+\item{tax_level}{Which rank's optimization audit the \code{"auto"} /
+\code{"secondary"} thresholds are read from, i.e. \code{SI_Audit_<tax_level>}
+and \code{Reads_Audit_<tax_level>} (\code{NULL}, the default, uses
+\code{"Species"}). This does \emph{not} filter the output, which always
+contains all ranks.}
 
 \item{CS_A}{Character or numeric. CS for Archaea:
 \code{"auto"}, \code{"secondary"}, or a numeric value. Default: \code{"auto"}.}
@@ -56,7 +58,9 @@ audit from \code{taxa_retention()}, Step 001) and the optimal minimum reads
 \code{CS_*} and \code{reads_min_*} arguments accept \code{"auto"},
 \code{"secondary"}, or a manual numeric value per domain. The optimal reads is
 looked up at each domain's resolved CS, so the mosaic combines both data-driven
-thresholds automatically. Enforces a strict \code{> 0} read filter.
+thresholds automatically. The mosaic always retains \strong{all} taxonomic
+ranks present in the input (as an MPA profile does); enforces a strict
+\code{> 0} read filter.
 }
 \examples{
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")

@@ -155,7 +155,7 @@
 
 #' @noRd
 .rst_filter_domain <- function(count_matrix, row_meta, target_col,
-                               dom, tax_level, min_reads) {
+                               dom, min_reads) {
     counts_vec <- count_matrix[, target_col]
     pass <- which(counts_vec >= min_reads & counts_vec > 0)
     if (length(pass) == 0) {
@@ -163,8 +163,9 @@
     }
     sub_meta <- row_meta[pass, ]
     sub_counts <- counts_vec[pass]
+    # The mosaic always keeps ALL taxonomic ranks present in the .mpa (no rank
+    # filter); tax_level only governs which optimization audit "auto" reads.
     mask <- sub_meta$Domain_Code == dom
-    if (!is.null(tax_level)) mask <- mask & (sub_meta$Rank == tax_level)
     mask[is.na(mask)] <- FALSE
     if (sum(mask) == 0) {
         return(NULL)
@@ -234,7 +235,7 @@
 
 #' @noRd
 .rst_process_sample <- function(samp, count_matrix, row_meta, all_cols,
-                                configs, audit_df, reads_audit, tax_level,
+                                configs, audit_df, reads_audit,
                                 output_dir, log_msg) {
     log_msg("----------------------------------------------------")
     log_msg("  Sample: ", samp)
@@ -251,7 +252,7 @@
             cfg$min_val, dom, samp, resolved$val, reads_audit, log_msg
         )
         part_df <- .rst_filter_domain(
-            count_matrix, row_meta, target_col, dom, tax_level, reads_res$val
+            count_matrix, row_meta, target_col, dom, reads_res$val
         )
         if (is.null(part_df)) next
         cs_num <- tryCatch(as.numeric(match_suf), warning = function(w) NA_real_)
@@ -294,12 +295,16 @@
 #' \code{CS_*} and \code{reads_min_*} arguments accept \code{"auto"},
 #' \code{"secondary"}, or a manual numeric value per domain. The optimal reads is
 #' looked up at each domain's resolved CS, so the mosaic combines both data-driven
-#' thresholds automatically. Enforces a strict \code{> 0} read filter.
+#' thresholds automatically. The mosaic always retains \strong{all} taxonomic
+#' ranks present in the input (as an MPA profile does); enforces a strict
+#' \code{> 0} read filter.
 #'
 #' @param project_dir Path to the project root.
-#' @param tax_level Taxonomic level to filter (e.g., \code{"Species"}).
-#'   If \code{NULL}, all levels are retained. Also selects which
-#'   \code{SI_Audit}/\code{Reads_Audit} (\code{"Species"} when \code{NULL}).
+#' @param tax_level Which rank's optimization audit the \code{"auto"} /
+#'   \code{"secondary"} thresholds are read from, i.e. \code{SI_Audit_<tax_level>}
+#'   and \code{Reads_Audit_<tax_level>} (\code{NULL}, the default, uses
+#'   \code{"Species"}). This does \emph{not} filter the output, which always
+#'   contains all ranks.
 #' @param CS_A Character or numeric. CS for Archaea:
 #'   \code{"auto"}, \code{"secondary"}, or a numeric value. Default: \code{"auto"}.
 #' @param reads_min_A Minimum reads for Archaea: \code{"auto"}/\code{"secondary"}
@@ -358,7 +363,7 @@ retrieve_selected_taxa <- function(project_dir,
                 .rst_process_sample(
                     samp, tse_data$count_matrix, tse_data$row_meta,
                     tse_data$all_cols, configs, audit_df, reads_audit,
-                    tax_level, setup$output_dir, log_msg
+                    setup$output_dir, log_msg
                 )
             }, logical(1)))
             if (n_generated > 0) {

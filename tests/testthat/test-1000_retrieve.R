@@ -42,6 +42,15 @@ test_that("retrieve_selected_taxa applies UX logic correctly", {
     expect_true(file.exists(file.path(out_dir, "SAMPLE01_karioCaS_Mosaic.mpa")))
     expect_true(file.exists(file.path(out_dir, "SAMPLE01_karioCaS_Mosaic.tsv")))
 
+    # B. The mosaic keeps ALL ranks even though tax_level = "Species" was given
+    #    (tax_level no longer filters the output).
+    m <- read.delim(
+        file.path(out_dir, "SAMPLE01_karioCaS_Mosaic.tsv"),
+        check.names = FALSE
+    )
+    tax <- as.character(m[[1]])
+    expect_true(any(!grepl("[|]s__", tax))) # parent-rank rows present
+
     # 6. Cleanup
     unlink(temp_proj_dir, recursive = TRUE)
 })

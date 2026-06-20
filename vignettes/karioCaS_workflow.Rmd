@@ -150,7 +150,7 @@ retrieve_selected_taxa(
 
 The resulting `SAMPLENAME_karioCaS_Mosaic.mpa` file, saved in the `1000_final_selection` folder, is a highly refined, high-confidence taxonomic profile, scrubbed of statistical noise and ready for downstream ecological or clinical analysis.
 
-Finally, `taxa_resolution(project_dir = proj_dir)` (with no `CS`) inspects the Parent-to-Child resolution of this final mosaic. To make that view meaningful, build the mosaic with `tax_level = NULL` so the parent ranks are retained alongside the species.
+Finally, `taxa_resolution(project_dir = proj_dir)` (with no `CS`) inspects the Parent-to-Child resolution of this final mosaic. The mosaic always retains every taxonomic rank, so this works out of the box.
 
 ```{r cleanup, include=FALSE}
 # Clean up temporary directory

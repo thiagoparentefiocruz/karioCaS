@@ -117,6 +117,6 @@ retrieve_selected_taxa(
 )
 
 # 4. Inspect Parent-to-Child resolution of the FINAL mosaic (default source)
-#    (run retrieve_selected_taxa() with tax_level = NULL to keep parent ranks)
+#    (the mosaic always keeps all ranks, so resolution works out of the box)
 taxa_resolution(project_dir = proj_dir)
 ```

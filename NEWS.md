@@ -1,3 +1,14 @@
+# karioCaS 0.99.9
+
+## Changes
+
+* `retrieve_selected_taxa()` now **always retains all taxonomic ranks** in the
+  mosaic (an MPA profile naturally has every level). The `tax_level` argument no
+  longer filters the output; it now only selects which rank's optimization audit
+  the `"auto"`/`"secondary"` thresholds are read from (`SI_Audit_<tax_level>` /
+  `Reads_Audit_<tax_level>`; `NULL` -> `"Species"`). This also makes
+  `taxa_resolution()` on the final mosaic reliable without any special setup.
+
 # karioCaS 0.99.8
 
 ## Changes
