@@ -120,23 +120,30 @@ head(audit_df[audit_df$SI_Type == "Primary_SI", c("Sample", "Domain", "CS", "Tax
 
 `taxa_retention()` always saves an objective audit trail (`SI_Audit_<rank>.rds` and `.tsv`) covering every sample, and marks each domain's **median Primary SI** as a dashed reference line on the group overlay.
 
+The same idea applies to read depth: `reads_per_taxa()` finds the optimal **minimum reads** (the elbow of the saturation curve) per domain and writes a `Reads_Audit`, so the final mosaic can use both thresholds automatically.
+
+```{r reads_audit}
+# Optimal minimum reads per domain (writes Reads_Audit_Species.tsv/.rds)
+reads_audit <- reads_per_taxa(project_dir = proj_dir, analysis_level = "Species")
+```
+
 ***
 
 ## 5. The Ultimate Biological Mosaic
 
 Once the optimal thresholds are defined mathematically, we extract the surviving taxa. Since Archaea might require a CS of 0.20 while Bacteria requires a CS of 0.40, `karioCaS` allows you to create a "Mosaic" `.mpa` file using specific thresholds for each domain.
 
-By setting the arguments to `"auto"`, the package natively reads the SI audit written by `taxa_retention()` and applies the mathematically optimal *Primary SI* for each domain.
+Both knobs are data-driven. Setting a `CS_*` argument to `"auto"` pulls the optimal *Primary SI* from the audit written by `taxa_retention()`; setting a `reads_min_*` argument to `"auto"` pulls the optimal minimum reads from the `Reads_Audit` written by `reads_per_taxa()`, looked up at that domain's resolved CS. Either can still be a manual number.
 
 ```{r retrieve_taxa}
-# Generate the final mosaic using automated mathematical thresholds
+# Generate the final mosaic combining optimal CS and optimal minimum reads
 retrieve_selected_taxa(
     project_dir = proj_dir,
     tax_level = "Species",
-    CS_B = "auto", # Will pull the Primary SI for Bacteria
-    CS_A = "secondary", # Attempts to pull a Secondary SI (or fallbacks to Primary)
-    CS_E = 40, # Manual override (strictly CS40)
-    CS_V = 0 # Manual fallback (CS0)
+    CS_B = "auto", reads_min_B = "auto", # optimal CS + optimal reads for Bacteria
+    CS_A = "secondary", reads_min_A = "auto", # conservative CS, optimal reads
+    CS_E = 40, reads_min_E = 10, # manual overrides for Eukaryota
+    CS_V = 0, reads_min_V = 0 # keep everything for Viruses
 )
 ```
 

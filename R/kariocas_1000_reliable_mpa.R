@@ -177,8 +177,64 @@
 }
 
 #' @noRd
+.rst_load_reads_audit <- function(project_dir, tax_level, configs, log_msg) {
+    needs <- any(vapply(configs, function(x) {
+        tolower(as.character(x$min_val)) %in% c("auto", "secondary")
+    }, logical(1)))
+    if (!needs) {
+        return(NULL)
+    }
+    log_msg("STEP 1.6: Loading Reads Audit Data...")
+    audit_tax <- if (is.null(tax_level)) "Species" else tax_level
+    f <- file.path(
+        project_dir, "003_cutoffs", paste0("Reads_Audit_", audit_tax, ".rds")
+    )
+    if (!file.exists(f)) {
+        log_msg("  [WARNING] Reads audit not found: ", f)
+        log_msg("  Ensure you ran reads_per_taxa() (Step 003). Fallback to 0.")
+        return(NULL)
+    }
+    log_msg("  -> Reads audit loaded for level: ", audit_tax)
+    readRDS(f)
+}
+
+#' @noRd
+.rst_resolve_reads <- function(user_val, dom, samp, resolved_cs,
+                               reads_audit, log_msg) {
+    uv <- tolower(as.character(user_val))
+    if (!uv %in% c("auto", "secondary")) {
+        n <- suppressWarnings(as.numeric(uv))
+        return(list(val = if (is.na(n)) 0 else n, tag = "[Manual]"))
+    }
+    if (!is.null(reads_audit)) {
+        sub <- dplyr::filter(
+            reads_audit, .data$Sample == samp,
+            .data$Domain == dom, .data$CS == resolved_cs
+        )
+        if (nrow(sub) > 0) {
+            want <- if (uv == "auto") "Primary_SI" else "Secondary_SI_1"
+            v <- sub$Cutoff[which(sub$SI_Type == want)]
+            if (length(v) > 0 && !is.na(v[1])) {
+                return(list(val = v[1], tag = paste0("[Reads:", uv, "]")))
+            }
+            if (uv == "secondary") {
+                v <- sub$Cutoff[which(sub$SI_Type == "Primary_SI")]
+                if (length(v) > 0) {
+                    return(list(val = v[1], tag = "[Reads:Sec->Primary]"))
+                }
+            }
+        }
+    }
+    log_msg(sprintf(
+        "    [INFO] No optimal reads for %s @ CS%02d in %s; using 0.",
+        dom, resolved_cs, samp
+    ))
+    list(val = 0, tag = "[Reads:none->0]")
+}
+
+#' @noRd
 .rst_process_sample <- function(samp, count_matrix, row_meta, all_cols,
-                                configs, audit_df, tax_level,
+                                configs, audit_df, reads_audit, tax_level,
                                 output_dir, log_msg) {
     log_msg("----------------------------------------------------")
     log_msg("  Sample: ", samp)
@@ -191,15 +247,19 @@
         match_suf <- .rst_match_column(samp, resolved$val, available_suffixes, log_msg)
         if (is.null(match_suf)) next
         target_col <- paste0(samp, "_CS", match_suf)
+        reads_res <- .rst_resolve_reads(
+            cfg$min_val, dom, samp, resolved$val, reads_audit, log_msg
+        )
         part_df <- .rst_filter_domain(
-            count_matrix, row_meta, target_col, dom, tax_level, cfg$min
+            count_matrix, row_meta, target_col, dom, tax_level, reads_res$val
         )
         if (is.null(part_df)) next
         cs_num <- tryCatch(as.numeric(match_suf), warning = function(w) NA_real_)
         cs_display <- if (!is.na(cs_num)) cs_num / 100 else 0
         log_msg(sprintf(
-            "    -> Added %d %s taxa (CS = %.2f %s | min_reads = %d)",
-            nrow(part_df), dom, cs_display, resolved$tag, cfg$min
+            "    -> Added %d %s taxa (CS = %.2f %s | min_reads = %g %s)",
+            nrow(part_df), dom, cs_display, resolved$tag,
+            reads_res$val, reads_res$tag
         ))
         taxa_list[[dom]] <- part_df
     }
@@ -227,23 +287,30 @@
 #' Retrieve Selected Taxa with Domain-Specific Thresholds (Final Mosaic Step)
 #'
 #' Creates a "biological mosaic" for each sample using the
-#' \code{karioCaS_TSE.rds} object from Step 000 and, optionally, the
-#' Stability Index audit from Step 006. Supports \code{"auto"},
-#' \code{"secondary"}, or manual numeric thresholds per domain.
-#' Enforces a strict \code{> 0} read filter to prevent zero-count taxa.
+#' \code{karioCaS_TSE.rds} object from Step 000 and, optionally, the optimal
+#' thresholds computed earlier: the optimal Confidence Score (Stability Index
+#' audit from \code{taxa_retention()}, Step 001) and the optimal minimum reads
+#' (\code{Reads_Audit} from \code{reads_per_taxa()}, Step 003). Both the
+#' \code{CS_*} and \code{reads_min_*} arguments accept \code{"auto"},
+#' \code{"secondary"}, or a manual numeric value per domain. The optimal reads is
+#' looked up at each domain's resolved CS, so the mosaic combines both data-driven
+#' thresholds automatically. Enforces a strict \code{> 0} read filter.
 #'
 #' @param project_dir Path to the project root.
 #' @param tax_level Taxonomic level to filter (e.g., \code{"Species"}).
-#'   If \code{NULL}, all levels are retained.
+#'   If \code{NULL}, all levels are retained. Also selects which
+#'   \code{SI_Audit}/\code{Reads_Audit} (\code{"Species"} when \code{NULL}).
 #' @param CS_A Character or numeric. CS for Archaea:
 #'   \code{"auto"}, \code{"secondary"}, or a numeric value. Default: \code{"auto"}.
-#' @param reads_min_A Integer. Minimum reads for Archaea. Default: 0.
+#' @param reads_min_A Minimum reads for Archaea: \code{"auto"}/\code{"secondary"}
+#'   (pulled from the Reads_Audit at the resolved CS) or a numeric value.
+#'   Default: 0.
 #' @param CS_B Character or numeric. CS for Bacteria. Default: \code{"auto"}.
-#' @param reads_min_B Integer. Minimum reads for Bacteria. Default: 0.
+#' @param reads_min_B Minimum reads for Bacteria. Default: 0.
 #' @param CS_E Character or numeric. CS for Eukaryota. Default: \code{"auto"}.
-#' @param reads_min_E Integer. Minimum reads for Eukaryota. Default: 0.
+#' @param reads_min_E Minimum reads for Eukaryota. Default: 0.
 #' @param CS_V Character or numeric. CS for Viruses. Default: \code{"auto"}.
-#' @param reads_min_V Integer. Minimum reads for Viruses. Default: 0.
+#' @param reads_min_V Minimum reads for Viruses. Default: 0.
 #'
 #' @return Invisibly returns \code{TRUE}. Mosaic \code{.mpa} and \code{.tsv}
 #'   files are saved to \code{<project_dir>/1000_final_selection/}.
@@ -256,13 +323,14 @@
 #' @examples
 #' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 #'
+#' # Fully data-driven mosaic: optimal CS and optimal min-reads per domain
 #' # retrieve_selected_taxa(
 #' #   project_dir = toy_project,
 #' #   tax_level   = "Species",
-#' #   CS_B        = "auto",
-#' #   CS_A        = 20,
-#' #   CS_E        = 40,
-#' #   CS_V        = 0
+#' #   CS_B        = "auto", reads_min_B = "auto",
+#' #   CS_A        = "auto", reads_min_A = "auto",
+#' #   CS_E        = 40,     reads_min_E = 10,
+#' #   CS_V        = 0,      reads_min_V = 0
 #' # )
 retrieve_selected_taxa <- function(project_dir,
                                    tax_level = NULL,
@@ -273,21 +341,24 @@ retrieve_selected_taxa <- function(project_dir,
     setup <- .rst_setup(project_dir)
     log_msg <- setup$log_msg
     configs <- list(
-        Archaea   = list(val = CS_A, min = as.numeric(reads_min_A)),
-        Bacteria  = list(val = CS_B, min = as.numeric(reads_min_B)),
-        Eukaryota = list(val = CS_E, min = as.numeric(reads_min_E)),
-        Viruses   = list(val = CS_V, min = as.numeric(reads_min_V))
+        Archaea   = list(val = CS_A, min_val = reads_min_A),
+        Bacteria  = list(val = CS_B, min_val = reads_min_B),
+        Eukaryota = list(val = CS_E, min_val = reads_min_E),
+        Viruses   = list(val = CS_V, min_val = reads_min_V)
     )
     tryCatch(
         {
             tse_data <- .rst_load_tse(project_dir, log_msg)
             audit_df <- .rst_load_audit(project_dir, tax_level, configs, log_msg)
+            reads_audit <- .rst_load_reads_audit(
+                project_dir, tax_level, configs, log_msg
+            )
             log_msg("STEP 2: Processing Mosaics...")
             n_generated <- sum(vapply(tse_data$SAMPLES, function(samp) {
                 .rst_process_sample(
                     samp, tse_data$count_matrix, tse_data$row_meta,
-                    tse_data$all_cols, configs, audit_df, tax_level,
-                    setup$output_dir, log_msg
+                    tse_data$all_cols, configs, audit_df, reads_audit,
+                    tax_level, setup$output_dir, log_msg
                 )
             }, logical(1)))
             if (n_generated > 0) {

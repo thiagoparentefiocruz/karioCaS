@@ -21,24 +21,27 @@ retrieve_selected_taxa(
 \item{project_dir}{Path to the project root.}
 
 \item{tax_level}{Taxonomic level to filter (e.g., \code{"Species"}).
-If \code{NULL}, all levels are retained.}
+If \code{NULL}, all levels are retained. Also selects which
+\code{SI_Audit}/\code{Reads_Audit} (\code{"Species"} when \code{NULL}).}
 
 \item{CS_A}{Character or numeric. CS for Archaea:
 \code{"auto"}, \code{"secondary"}, or a numeric value. Default: \code{"auto"}.}
 
-\item{reads_min_A}{Integer. Minimum reads for Archaea. Default: 0.}
+\item{reads_min_A}{Minimum reads for Archaea: \code{"auto"}/\code{"secondary"}
+(pulled from the Reads_Audit at the resolved CS) or a numeric value.
+Default: 0.}
 
 \item{CS_B}{Character or numeric. CS for Bacteria. Default: \code{"auto"}.}
 
-\item{reads_min_B}{Integer. Minimum reads for Bacteria. Default: 0.}
+\item{reads_min_B}{Minimum reads for Bacteria. Default: 0.}
 
 \item{CS_E}{Character or numeric. CS for Eukaryota. Default: \code{"auto"}.}
 
-\item{reads_min_E}{Integer. Minimum reads for Eukaryota. Default: 0.}
+\item{reads_min_E}{Minimum reads for Eukaryota. Default: 0.}
 
 \item{CS_V}{Character or numeric. CS for Viruses. Default: \code{"auto"}.}
 
-\item{reads_min_V}{Integer. Minimum reads for Viruses. Default: 0.}
+\item{reads_min_V}{Minimum reads for Viruses. Default: 0.}
 }
 \value{
 Invisibly returns \code{TRUE}. Mosaic \code{.mpa} and \code{.tsv}
@@ -46,20 +49,25 @@ Invisibly returns \code{TRUE}. Mosaic \code{.mpa} and \code{.tsv}
 }
 \description{
 Creates a "biological mosaic" for each sample using the
-\code{karioCaS_TSE.rds} object from Step 000 and, optionally, the
-Stability Index audit from Step 006. Supports \code{"auto"},
-\code{"secondary"}, or manual numeric thresholds per domain.
-Enforces a strict \code{> 0} read filter to prevent zero-count taxa.
+\code{karioCaS_TSE.rds} object from Step 000 and, optionally, the optimal
+thresholds computed earlier: the optimal Confidence Score (Stability Index
+audit from \code{taxa_retention()}, Step 001) and the optimal minimum reads
+(\code{Reads_Audit} from \code{reads_per_taxa()}, Step 003). Both the
+\code{CS_*} and \code{reads_min_*} arguments accept \code{"auto"},
+\code{"secondary"}, or a manual numeric value per domain. The optimal reads is
+looked up at each domain's resolved CS, so the mosaic combines both data-driven
+thresholds automatically. Enforces a strict \code{> 0} read filter.
 }
 \examples{
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
+# Fully data-driven mosaic: optimal CS and optimal min-reads per domain
 # retrieve_selected_taxa(
 #   project_dir = toy_project,
 #   tax_level   = "Species",
-#   CS_B        = "auto",
-#   CS_A        = 20,
-#   CS_E        = 40,
-#   CS_V        = 0
+#   CS_B        = "auto", reads_min_B = "auto",
+#   CS_A        = "auto", reads_min_A = "auto",
+#   CS_E        = 40,     reads_min_E = 10,
+#   CS_V        = 0,      reads_min_V = 0
 # )
 }

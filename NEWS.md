@@ -1,3 +1,14 @@
+# karioCaS 0.99.6
+
+## Changes
+
+* **`retrieve_selected_taxa()` can now choose the minimum reads automatically.**
+  The `reads_min_*` arguments accept `"auto"` / `"secondary"` (in addition to a
+  manual number), pulling the optimal minimum reads from the `Reads_Audit`
+  written by `reads_per_taxa()`, looked up at each domain's resolved Confidence
+  Score. The final mosaic therefore combines both data-driven thresholds - the
+  optimal CS and the optimal min-reads - per domain, closing the workflow loop.
+
 # karioCaS 0.99.5
 
 ## Changes

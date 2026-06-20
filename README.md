@@ -70,7 +70,7 @@ The package follows a logical, step-by-step workflow for metagenomic validation,
 > **Group overlays by default.** `taxa_retention()` and `reads_per_taxa()` draw a single figure **per biological group** instead of one set of PDFs per sample: every sample is a faint line and the group mean (± SD) is highlighted, faceted by Domain. Groups are inferred from sample names by stripping trailing digits (e.g. `SAMPLE33`, `SAMPLE34` → group `SAMPLE`; `CONTROL01`, `TREATED01` → `CONTROL`, `TREATED`). Use `detail_samples=` to also render detailed per-sample panels into a `per_sample/` subfolder: `NULL` (default) = group only, `"all"` = every sample, or a comma-separated list such as `"SAMPLE33, SAMPLE45"`.
 
 **3. The Ultimate Biological Mosaic (Step 1000)**
-* `retrieve_selected_taxa()`: Reads the `SI_Audit` produced by `taxa_retention()` to extract surviving taxa based on domain-specific mathematical thresholds. Generates a highly refined, high-confidence `.mpa` file, scrubbed of statistical noise and ready for downstream analysis.
+* `retrieve_selected_taxa()`: Extracts surviving taxa per domain using **both** data-driven thresholds — the optimal CS (`SI_Audit` from `taxa_retention()`) and the optimal minimum reads (`Reads_Audit` from `reads_per_taxa()`), looked up at the resolved CS. `CS_*` and `reads_min_*` each accept `"auto"`, `"secondary"`, or a manual value. Generates a highly refined, high-confidence `.mpa` file, scrubbed of statistical noise and ready for downstream analysis.
 
 ## 📖 Quick Example
 
@@ -104,14 +104,15 @@ import_karioCaS(project_dir = proj_dir)
       heatmaps_karioCaS(project_dir = proj_dir)
 
 # 3. Retrieve the Final Biological Mosaic
-# Uses mathematically optimal thresholds for Bacteria and Archaea, 
-# and manual overrides for Eukaryota and Viruses.
+# Both CS_* and reads_min_* accept "auto"/"secondary" (pulled from the SI and
+# Reads audits) or a manual value. Here: fully data-driven for Bacteria/Archaea,
+# manual overrides for Eukaryota/Viruses.
 retrieve_selected_taxa(
   project_dir = proj_dir, 
   tax_level = "Species",
-  CS_B = "auto", 
-  CS_A = "auto", 
-  CS_E = 40, 
-  CS_V = 0
+  CS_B = "auto", reads_min_B = "auto",
+  CS_A = "auto", reads_min_A = "auto",
+  CS_E = 40,     reads_min_E = 10,
+  CS_V = 0,      reads_min_V = 0
 )
 ```
