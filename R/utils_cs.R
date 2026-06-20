@@ -1,5 +1,5 @@
 # ==============================================================================
-# CONFIDENCE SCORE (CS) — CANONICAL UNIT HELPERS
+# CONFIDENCE SCORE (CS) - CANONICAL UNIT HELPERS
 # ==============================================================================
 #
 # karioCaS stores every Confidence Score internally as an INTEGER PERCENT in the

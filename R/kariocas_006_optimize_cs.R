@@ -1,5 +1,5 @@
 # ==============================================================================
-# PRIVATE HELPERS — optimize_CS()
+# PRIVATE HELPERS - optimize_CS()
 # ==============================================================================
 
 #' @noRd
@@ -358,7 +358,7 @@
 #' @examples
 #' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 #'
-#' # Dynamic method (default — ideal for clinical/pathogen focus)
+#' # Dynamic method (default - ideal for clinical/pathogen focus)
 #' # optimize_CS(project_dir = toy_project, tax_level = "Species")
 #'
 #' # Segmented regression (ideal for ecology / biological dark matter)

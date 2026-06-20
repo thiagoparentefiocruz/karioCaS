@@ -1,6 +1,6 @@
 # R/globals.R
 
-#' @importFrom methods is
+#' @importFrom methods is show
 #' @importFrom stats setNames
 #' @importFrom utils head
 #' @importFrom rlang :=

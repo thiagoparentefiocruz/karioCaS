@@ -14,6 +14,8 @@ Description: Provides a comprehensive framework for analyzing Kraken2 metagenomi
     of all biological domains. Includes high-quality visualization tools for 
     retention rates, shared taxa (Upset plots), and stability heatmaps.
 License: GPL (>= 3)
+Depends:
+    R (>= 4.5.0)
 Encoding: UTF-8
 RoxygenNote: 7.3.3
 Imports: 

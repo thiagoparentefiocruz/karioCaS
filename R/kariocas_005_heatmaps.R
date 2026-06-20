@@ -1,5 +1,5 @@
 # ==============================================================================
-# PRIVATE HELPERS — heatmaps_karioCaS()
+# PRIVATE HELPERS - heatmaps_karioCaS()
 # Not exported. No man/ page needed.
 # ==============================================================================
 
@@ -145,7 +145,7 @@
     elite_names <- dplyr::slice_head(survivors, n = top_n) |>
         dplyr::pull(.data$Taxon_Name)
     if (length(elite_names) == 0) {
-        log_msg("    Info: ", dom, " — no survivors at target CS. Plotting loss groups only.")
+        log_msg("    Info: ", dom, " - no survivors at target CS. Plotting loss groups only.")
     }
     df_elite <- dplyr::filter(df_dom, .data$Taxon_Name %in% elite_names)
     df_rest <- dplyr::filter(df_dom, !.data$Taxon_Name %in% elite_names)
