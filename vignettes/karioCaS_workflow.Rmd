@@ -72,12 +72,18 @@ tse_object
 
 karioCaS shines in its ability to generate publication-ready PDFs to visually inspect the behavior of taxa as stringency increases. All plotting functions automatically read from the harmonized data and save their outputs into dynamically generated subfolders.
 
+By default, `taxa_retention()`, `reads_per_taxa()` and `optimize_CS()` produce a single **group overlay** per biological group rather than one set of PDFs per sample: every sample of the group is drawn as a faint line while the group mean (± SD) is highlighted, faceted by Domain. This keeps the output compact and makes group-level trends obvious. Groups are inferred from sample names by stripping trailing digits (e.g. `SAMPLE33` and `SAMPLE34` both belong to group `SAMPLE`).
+
 ```{r visual_exploration, eval=FALSE}
 # Note: In an active R session, these commands will generate high-quality
 # PDF panels in your project directory.
 
-# Evaluate how many taxa and reads "survive" as stringency increases
+# Group-overlay retention curves (one figure per biological group)
 taxa_retention(project_dir = proj_dir)
+
+# Need a closer look? Render detailed per-sample panels into a per_sample/
+# subfolder. Use "all", or a comma-separated list of sample names.
+taxa_retention(project_dir = proj_dir, detail_samples = "SAMPLE01")
 
 # Evaluate taxonomic depth and Parent-to-Child resolution
 taxa_resolution(project_dir = proj_dir, parent_level = "Genus", child_level = "Species")
@@ -106,7 +112,7 @@ audit_df <- optimize_CS(project_dir = proj_dir, tax_level = "Species", method = 
 head(audit_df[audit_df$SI_Type == "Primary_SI", c("Sample", "Domain", "CS", "Taxa_Count", "Step_Loss_Pct")])
 ```
 
-The `optimize_CS()` function saves an objective audit trail (`.rds` and `.tsv`) and generates PDFs highlighting the mathematical shift on the decay curves.
+The `optimize_CS()` function always saves an objective audit trail (`.rds` and `.tsv`) covering every sample. By default it draws a single group-overlay decision plot per group in which each domain's **median Primary SI** is marked with a dashed reference line; pass `detail_samples=` to additionally export the per-sample SI decay curves.
 
 ***
 

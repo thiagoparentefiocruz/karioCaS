@@ -57,14 +57,16 @@ The package follows a logical, step-by-step workflow for metagenomic validation,
 * `import_karioCaS()`: Standardizes raw outputs from multiple stringencies into a cohesive Bioconductor `TreeSummarizedExperiment` (TSE) object.
 
 **2. Visual Exploration (Steps 001 - 005)**
-* `taxa_retention()`: Quantifies the percentage of taxa and reads that remain as confidence stringency increases.
+* `taxa_retention()`: Quantifies the percentage of taxa that remain as confidence stringency increases.
 * `taxa_resolution()`: Evaluates taxonomic depth and Parent-to-Child resolution across different scores.
 * `reads_per_taxa()`: Visualizes read distribution efficiency across ranks.
 * `upset_kariocas()`: Identifies "transient" vs. "persistent" taxa.
 * `heatmaps_karioCaS()`: Detailed abundance heatmaps showing taxa extinction patterns.
 
+> **Group overlays by default.** `taxa_retention()`, `reads_per_taxa()` and `optimize_CS()` now draw a single figure **per biological group** instead of one set of PDFs per sample: every sample is a faint line and the group mean (± SD) is highlighted, faceted by Domain. Groups are inferred from sample names by stripping trailing digits (e.g. `SAMPLE33`, `SAMPLE34` → group `SAMPLE`; `CONTROL01`, `TREATED01` → `CONTROL`, `TREATED`). Use `detail_samples=` to also render detailed per-sample panels into a `per_sample/` subfolder: `NULL` (default) = group only, `"all"` = every sample, or a comma-separated list such as `"SAMPLE33, SAMPLE45"`.
+
 **3. Objective Thresholding (Step 006)**
-* `optimize_CS()`: The core mathematical engine. Replaces subjective thresholding with a Multi-Strategy Stability Index (SI):
+* `optimize_CS()`: The core mathematical engine. Replaces subjective thresholding with a Multi-Strategy Stability Index (SI). The default group overlay also marks each domain's **median Primary SI** as a dashed reference line, turning the figure into a group-wide decision plot. Strategies:
   * **Dynamic:** Adapts to the basal noise of the sample (ideal for pathogen focus).
   * **Segmented:** Uses a Broken-Stick regression model to find regime shifts (ideal for ecology/dark matter).
   * **Manual:** Allows expert-defined acceptable loss tolls.
@@ -84,13 +86,16 @@ import_karioCaS(project_dir = proj_dir)
 
 # 2. Visual Exploration 
 
-    # Evaluate Taxonomic Retention
+    # Taxa retention — one group-overlay figure per biological group (default)
       taxa_retention(project_dir = proj_dir)
+
+    # ...or also drill into specific samples (detailed PDFs in per_sample/)
+      taxa_retention(project_dir = proj_dir, detail_samples = "SAMPLE33, SAMPLE45")
 
     # Evaluate the taxa "persistance" over increasing Confidence Scores 
       upset_kariocas(project_dir = proj_dir)
 
-    # Evaluate NGS Read Retention
+    # Evaluate NGS Read Retention (group overlay; detail_samples = "all" for every sample)
       reads_per_taxa(project_dir = proj_dir)
 
     # Evaluate Parent-to-Child taxa resolution
@@ -100,7 +105,7 @@ import_karioCaS(project_dir = proj_dir)
       heatmaps_karioCaS(project_dir = proj_dir)
 
 # 3. Optimize Confidence Scores (Objective Mathematics)
-# Calculates the Stability Index automatically
+# Group decision plot + per-sample Stability Index audit (saved as TSV/RDS)
 optimize_CS(project_dir = proj_dir, tax_level = "Species", method = "dynamic")
 
 # 4. Retrieve the Final Biological Mosaic
