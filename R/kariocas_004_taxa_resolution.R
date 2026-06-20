@@ -61,6 +61,40 @@
         )
 }
 
+#' Load the final mosaic (1000_final_selection) and parse its taxonomy.
+#' @noRd
+.txr_load_mosaic <- function(project_dir, parent_level, child_level, log_msg) {
+    log_msg(">>> Loading Final Mosaic (1000_final_selection)...")
+    mdir <- file.path(project_dir, "1000_final_selection")
+    files <- list.files(
+        mdir, pattern = "_karioCaS_Mosaic\\.tsv$", full.names = TRUE
+    )
+    if (length(files) == 0) {
+        stop(
+            "No mosaic files found in ", mdir,
+            ". Run retrieve_selected_taxa() first."
+        )
+    }
+    mosaic <- dplyr::bind_rows(lapply(files, function(f) {
+        samp <- sub("_karioCaS_Mosaic\\.tsv$", "", basename(f))
+        d <- readr::read_tsv(f, show_col_types = FALSE, progress = FALSE)
+        data.frame(
+            sample = samp,
+            Taxonomy_Full = d[[1]],
+            Counts = as.numeric(d[[2]]),
+            stringsAsFactors = FALSE
+        )
+    }))
+    tax_df <- .imp_parse_taxonomy(unique(mosaic$Taxonomy_Full), log_msg)
+    mosaic |>
+        dplyr::left_join(tax_df, by = "Taxonomy_Full") |>
+        dplyr::mutate(
+            Parent_Name = .data[[parent_level]],
+            Child_Name  = .data[[child_level]],
+            Rank        = trimws(.data$Rank)
+        )
+}
+
 #' @noRd
 .txr_calc_resolution <- function(df_dom, parent_level, child_level, top_n) {
     parent_totals <- df_dom |>
@@ -187,12 +221,12 @@
 }
 
 #' @noRd
-.txr_save_panel <- function(plots, DOMAINS, samp, cs,
+.txr_save_panel <- function(plots, samp, label,
                             parent_level, child_level, output_dir, log_msg) {
     layout <- (plots[["Bacteria"]] | plots[["Archaea"]]) /
         (plots[["Eukaryota"]] | plots[["Viruses"]]) +
         patchwork::plot_annotation(
-            title = paste(samp, "- CS", sprintf("%02d", cs)),
+            title = paste0(samp, " - ", gsub("_", " ", label)),
             subtitle = paste("Taxa Resolution:", parent_level, "vs", child_level),
             theme = ggplot2::theme(
                 plot.title = ggplot2::element_text(
@@ -206,8 +240,8 @@
         patchwork::plot_layout(guides = "collect") &
         ggplot2::theme(legend.position = "bottom")
     fname <- paste0(
-        samp, "_CS", sprintf("%02d", cs),
-        "_Resolution_", parent_level, "_vs_", child_level, ".pdf"
+        samp, "_Resolution_", parent_level, "_vs_", child_level,
+        "_", label, ".pdf"
     )
     ggplot2::ggsave(
         file.path(output_dir, fname), layout,
@@ -217,6 +251,24 @@
     log_msg("    -> Generated: ", fname)
 }
 
+#' @noRd
+.txr_render_sample <- function(df_samp, samp, label, parent_level, child_level,
+                               DOMAINS, top_n, output_dir, log_msg) {
+    log_msg("  Sample: ", samp)
+    plots <- stats::setNames(
+        lapply(DOMAINS, function(dom) {
+            df_dom <- dplyr::filter(df_samp, .data$Domain == dom)
+            .txr_domain_plot(
+                df_dom, dom, parent_level, child_level, top_n, log_msg
+            )
+        }),
+        DOMAINS
+    )
+    .txr_save_panel(
+        plots, samp, label, parent_level, child_level, output_dir, log_msg
+    )
+}
+
 # ==============================================================================
 # EXPORTED FUNCTION
 # ==============================================================================
@@ -224,12 +276,22 @@
 #' Generate Taxa Resolution Analysis (Step 004)
 #'
 #' Creates stacked bar plots showing resolution efficiency between a Parent Rank
-#' and a Child Rank. Uses \code{max()} for parent aggregation to prevent
-#' double-counting of children in cumulative data.
+#' and a Child Rank (how much of each parent clade's reads are resolved down to
+#' the child rank versus remaining parent-exclusive). Uses \code{max()} for
+#' parent aggregation to prevent double-counting of children in cumulative data.
+#'
+#' By default the analysis runs on the \strong{final mosaic} produced by
+#' \code{\link{retrieve_selected_taxa}} (\code{1000_final_selection/}), i.e. the
+#' data-driven high-confidence selection - one figure per sample. Alternatively,
+#' set \code{CS} to analyse the raw imported data at a single Confidence Score.
 #'
 #' @param project_dir Path to the project root.
 #' @param parent_level Name of the parent rank (default: \code{"Genus"}).
 #' @param child_level Name of the child rank (default: \code{"Species"}).
+#' @param CS Confidence Score to analyse. \code{NULL} (default) uses the final
+#'   mosaic from \code{retrieve_selected_taxa()}. A numeric value (Kraken
+#'   fraction \code{0-1} or percentage \code{0-100}) analyses the imported data
+#'   at that single CS instead of every CS.
 #' @param top_n Number of top taxa to display per domain (default: 10).
 #'
 #' @return Invisibly returns \code{NULL}. PDF plots are saved to
@@ -242,55 +304,67 @@
 #'   scale_y_discrete labs theme element_text guides guide_legend ggsave
 #' @importFrom patchwork plot_layout plot_annotation
 #' @importFrom scales label_number
+#' @importFrom readr read_tsv
 #' @importFrom ggtext element_markdown
 #' @importFrom SummarizedExperiment rowData
 #' @examples
 #' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 #'
-#' # Basic usage (Genus vs Species, top 10)
+#' # Default: resolution of the final mosaic (Genus vs Species, top 10)
 #' # taxa_resolution(project_dir = toy_project)
 #'
-#' # Family to Genus, top 5
-#' # taxa_resolution(
-#' #   project_dir  = toy_project,
-#' #   parent_level = "Family",
-#' #   child_level  = "Genus",
-#' #   top_n        = 5
-#' # )
+#' # Analyse the imported data at a single Confidence Score
+#' # taxa_resolution(project_dir = toy_project, CS = 40)
 taxa_resolution <- function(project_dir,
                             parent_level = "Genus",
                             child_level = "Species",
+                            CS = NULL,
                             top_n = 10) {
     setup <- .txr_setup(project_dir, parent_level, child_level)
-    df_proc <- .txr_load_and_enrich(
-        project_dir, parent_level, child_level, setup$log_msg
-    )
-    SAMPLES <- unique(df_proc$sample)
     DOMAINS <- names(get_kariocas_colors("domains"))
-    CS_LIST <- unique(df_proc$CS)
-    setup$log_msg(">>> Starting Analysis Loop...")
-    for (samp in SAMPLES) {
-        setup$log_msg("------------------------------------------------")
-        setup$log_msg("  Processing Sample: ", samp)
-        df_samp <- dplyr::filter(df_proc, .data$sample == samp)
-        for (cs in CS_LIST) {
-            df_curr <- dplyr::filter(df_samp, .data$CS == cs)
-            if (nrow(df_curr) == 0) next
-            plots <- stats::setNames(
-                lapply(DOMAINS, function(dom) {
-                    df_dom <- dplyr::filter(df_curr, .data$Domain == dom)
-                    .txr_domain_plot(
-                        df_dom, dom, parent_level, child_level,
-                        top_n, setup$log_msg
-                    )
-                }),
-                DOMAINS
-            )
-            .txr_save_panel(
-                plots, DOMAINS, samp, cs, parent_level,
-                child_level, setup$output_dir, setup$log_msg
+
+    if (is.null(CS)) {
+        df_proc <- .txr_load_mosaic(
+            project_dir, parent_level, child_level, setup$log_msg
+        )
+        label <- "Final_Mosaic"
+        if (!any(df_proc$Rank == parent_level, na.rm = TRUE)) {
+            setup$log_msg(
+                "  [WARNING] Mosaic has no '", parent_level,
+                "'-level rows; resolution will be empty. Re-run ",
+                "retrieve_selected_taxa() with tax_level = NULL to keep all ranks."
             )
         }
+    } else {
+        cs_pct <- .cs_arg_to_percent(CS)
+        if (is.na(cs_pct)) {
+            stop("Invalid 'CS': ", CS, ". Use a fraction (0-1) or percent (0-100).")
+        }
+        df_proc <- .txr_load_and_enrich(
+            project_dir, parent_level, child_level, setup$log_msg
+        )
+        avail <- sort(unique(df_proc$CS))
+        if (!cs_pct %in% avail) {
+            stop(
+                "CS ", cs_pct, "% not found. Available: ",
+                paste(avail, collapse = ", ")
+            )
+        }
+        df_proc <- dplyr::filter(df_proc, .data$CS == cs_pct)
+        label <- paste0("CS", sprintf("%02d", cs_pct))
+    }
+
+    SAMPLES <- unique(df_proc$sample)
+    setup$log_msg(
+        ">>> Resolution for ", length(SAMPLES), " sample(s) [", label, "]"
+    )
+    for (samp in SAMPLES) {
+        df_samp <- dplyr::filter(df_proc, .data$sample == samp)
+        if (nrow(df_samp) == 0) next
+        .txr_render_sample(
+            df_samp, samp, label, parent_level, child_level,
+            DOMAINS, top_n, setup$output_dir, setup$log_msg
+        )
     }
     setup$log_msg("SUCCESS: Resolution analysis completed.")
     invisible(NULL)

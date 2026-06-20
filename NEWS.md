@@ -1,3 +1,16 @@
+# karioCaS 0.99.7
+
+## Changes
+
+* **`taxa_resolution()` no longer draws a plot for every Confidence Score.** It
+  gains a `CS` argument: by default (`CS = NULL`) it analyses the **final mosaic**
+  from `retrieve_selected_taxa()` (`1000_final_selection/`) - one figure per
+  sample - importing and parsing the mosaic `.tsv` directly. Passing a numeric
+  `CS` (fraction or percent) analyses the imported data at that single score
+  instead of looping over all of them. Output filenames now end in
+  `_Final_Mosaic` or `_CS<nn>`. For a meaningful mosaic resolution, build the
+  mosaic with `retrieve_selected_taxa(tax_level = NULL)` so parent ranks are kept.
+
 # karioCaS 0.99.6
 
 ## Changes

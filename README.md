@@ -62,7 +62,7 @@ The package follows a logical, step-by-step workflow for metagenomic validation,
   * **Post-cliff:** A more conservative threshold deeper in the plateau (first stable CS after the steepest drop).
   * **Segmented:** Broken-stick regression for regime shifts (ideal for ecology/dark matter).
   * **Dynamic / Manual:** First CS within tail noise / expert-defined loss tolls.
-* `taxa_resolution()`: Evaluates taxonomic depth and Parent-to-Child resolution across different scores.
+* `taxa_resolution()`: Evaluates taxonomic depth (Parent-to-Child resolution). By default it analyzes the **final mosaic** (`retrieve_selected_taxa()` output) — one figure per sample; pass `CS=` to instead analyze the imported data at a single Confidence Score.
 * `reads_per_taxa()`: Saturation analysis on a log read axis. Computes the **optimal minimum reads** per domain (the saturation-curve elbow, via the same engine as the optimal CS), marks each domain's median on the group plot, and writes `Reads_Audit_<rank>` tables — a quantitative threshold for excluding low-abundance background/false-positive taxa.
 * `upset_kariocas()`: Identifies "transient" vs. "persistent" taxa.
 * `heatmaps_karioCaS()`: Detailed abundance heatmaps showing taxa extinction patterns.
@@ -97,8 +97,8 @@ import_karioCaS(project_dir = proj_dir)
     # Evaluate NGS Read Retention (group overlay; detail_samples = "all" for every sample)
       reads_per_taxa(project_dir = proj_dir)
 
-    # Evaluate Parent-to-Child taxa resolution
-      taxa_resolution(project_dir = proj_dir)
+    # Parent-to-Child taxa resolution at a chosen Confidence Score
+      taxa_resolution(project_dir = proj_dir, CS = 40)
 
     # Evaluate taxa extinction patterns
       heatmaps_karioCaS(project_dir = proj_dir)
@@ -115,4 +115,8 @@ retrieve_selected_taxa(
   CS_E = 40,     reads_min_E = 10,
   CS_V = 0,      reads_min_V = 0
 )
+
+# 4. Inspect Parent-to-Child resolution of the FINAL mosaic (default source)
+#    (run retrieve_selected_taxa() with tax_level = NULL to keep parent ranks)
+taxa_resolution(project_dir = proj_dir)
 ```

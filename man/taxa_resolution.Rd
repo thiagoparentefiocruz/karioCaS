@@ -8,6 +8,7 @@ taxa_resolution(
   project_dir,
   parent_level = "Genus",
   child_level = "Species",
+  CS = NULL,
   top_n = 10
 )
 }
@@ -18,6 +19,11 @@ taxa_resolution(
 
 \item{child_level}{Name of the child rank (default: \code{"Species"}).}
 
+\item{CS}{Confidence Score to analyse. \code{NULL} (default) uses the final
+mosaic from \code{retrieve_selected_taxa()}. A numeric value (Kraken
+fraction \code{0-1} or percentage \code{0-100}) analyses the imported data
+at that single CS instead of every CS.}
+
 \item{top_n}{Number of top taxa to display per domain (default: 10).}
 }
 \value{
@@ -26,20 +32,22 @@ Invisibly returns \code{NULL}. PDF plots are saved to
 }
 \description{
 Creates stacked bar plots showing resolution efficiency between a Parent Rank
-and a Child Rank. Uses \code{max()} for parent aggregation to prevent
-double-counting of children in cumulative data.
+and a Child Rank (how much of each parent clade's reads are resolved down to
+the child rank versus remaining parent-exclusive). Uses \code{max()} for
+parent aggregation to prevent double-counting of children in cumulative data.
+}
+\details{
+By default the analysis runs on the \strong{final mosaic} produced by
+\code{\link{retrieve_selected_taxa}} (\code{1000_final_selection/}), i.e. the
+data-driven high-confidence selection - one figure per sample. Alternatively,
+set \code{CS} to analyse the raw imported data at a single Confidence Score.
 }
 \examples{
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
-# Basic usage (Genus vs Species, top 10)
+# Default: resolution of the final mosaic (Genus vs Species, top 10)
 # taxa_resolution(project_dir = toy_project)
 
-# Family to Genus, top 5
-# taxa_resolution(
-#   project_dir  = toy_project,
-#   parent_level = "Family",
-#   child_level  = "Genus",
-#   top_n        = 5
-# )
+# Analyse the imported data at a single Confidence Score
+# taxa_resolution(project_dir = toy_project, CS = 40)
 }
