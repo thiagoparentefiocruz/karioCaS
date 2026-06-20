@@ -301,14 +301,19 @@
 }
 
 #' @noRd
-.tr_group_overlay <- function(df_proc, tax_level, DOMAINS, output_dir, log_msg) {
-    df_rank <- dplyr::filter(df_proc, .data$Rank == tax_level)
-    if (nrow(df_rank) == 0) {
-        log_msg("    [WARNING] No data at rank ", tax_level, "; skipping overlay.")
-        return(invisible(NULL))
-    }
-    df_rank$Group <- .grp_parse_group(df_rank$sample)
-    ret <- .grp_retention_data(df_rank)
+.tr_group_overlay <- function(full_audit, DOMAINS, tax_level, method,
+                              output_dir, log_msg) {
+    df <- full_audit
+    df$Group <- .grp_parse_group(df$Sample)
+    df$sample <- df$Sample
+    df$x <- df$CS
+    df$y <- df$Pct_Retained
+    prim <- df |>
+        dplyr::filter(.data$SI_Type == "Primary_SI") |>
+        dplyr::group_by(.data$Domain) |>
+        dplyr::summarise(
+            vline = stats::median(.data$CS, na.rm = TRUE), .groups = "drop"
+        )
     lbls <- get_kariocas_labels()
     apply_scales <- function(p) {
         p +
@@ -317,19 +322,23 @@
             ) +
             ggplot2::scale_y_continuous(limits = c(0, 105))
     }
-    for (grp in unique(ret$Group)) {
-        df_g <- dplyr::filter(ret, .data$Group == grp)
+    for (grp in unique(df$Group)) {
+        df_g <- dplyr::filter(df, .data$Group == grp)
         n_samples <- dplyr::n_distinct(df_g$sample)
+        prim_g <- dplyr::filter(prim, .data$Domain %in% unique(df_g$Domain))
+        vlines <- stats::setNames(prim_g$vline, prim_g$Domain)
         log_msg("  Group: ", grp, " (", n_samples, " samples)")
         plots <- .grp_overlay_plots(
-            df_g, DOMAINS, lbls$y_confidence, "**% Retained**", apply_scales
+            df_g, DOMAINS, lbls$y_confidence, "**% Retained**",
+            apply_scales, vlines = vlines
         )
         .grp_assemble_2x2(
             plots,
             paste0(grp, " - Group Retention (", tax_level, ")"),
             paste0(
                 "n = ", n_samples,
-                " samples | thin lines = samples, bold = group mean"
+                " samples | bold = group mean, dashed = median optimal CS (",
+                method, ")"
             ),
             paste0(grp, "_Group_Retention_", tax_level, ".pdf"),
             output_dir, log_msg
@@ -341,53 +350,100 @@
 # EXPORTED FUNCTION
 # ==============================================================================
 
-#' Run Confidence Score Retention Analysis (Step 001)
+#' Run Confidence Score Retention & Optimization (Step 001)
 #'
-#' Executes taxa retention analysis based on Confidence Score (Kraken/Bracken).
-#' By default it produces a single, low-clutter \strong{group overlay} per
-#' biological group: every sample of the group is drawn as a faint line with the
-#' group mean (\eqn{\pm}SD) highlighted, faceted by Domain. Detailed per-sample
-#' panels (all ranks, taxa vs reads) are written only on request.
+#' Executes taxa retention analysis based on Confidence Score (Kraken/Bracken)
+#' and, in the same step, computes the objective optimal CS (Stability Index, SI)
+#' for each domain. By default it produces a single, low-clutter \strong{group
+#' overlay} per biological group: every sample of the group is drawn as a faint
+#' line with the group mean (\eqn{\pm}SD) highlighted and each domain's median
+#' optimal CS marked with a dashed line, faceted by Domain. It also writes the
+#' machine-readable SI audit (\code{SI_Audit_<rank>.tsv}/\code{.rds}) used by
+#' \code{\link{retrieve_selected_taxa}}. Detailed per-sample panels (all ranks,
+#' taxa vs reads) are written only on request.
 #'
 #' Groups are inferred from sample names by stripping trailing digits
 #' (e.g. \code{SAMPLE33}, \code{SAMPLE34} both belong to group \code{SAMPLE}).
 #'
+#' The optimal CS is found with a multi-strategy engine: \code{"kneedle"}
+#' (default, parameter-free elbow detection), \code{"postcliff"} (a more
+#' conservative threshold past the steepest drop), \code{"segmented"}
+#' (broken-stick regression), \code{"dynamic"}, or \code{"manual"}.
+#'
 #' @param project_dir Root path of the project.
-#' @param tax_level Taxonomic rank used for the group overlay
+#' @param tax_level Taxonomic rank used for the group overlay and SI
 #'   (default: \code{"Species"}).
+#' @param method Optimal-CS strategy. One of \code{"kneedle"} (default),
+#'   \code{"postcliff"}, \code{"segmented"}, \code{"dynamic"}, or \code{"manual"}.
+#' @param manual_toll Numeric or named list. Acceptable step-wise loss percentage,
+#'   used only when \code{method = "manual"} (default: 1.0).
 #' @param detail_samples Which samples to also render as detailed per-sample
 #'   panels. \code{NULL} (default) writes only the group overlay; \code{"all"}
 #'   renders every sample; a comma-separated string such as
 #'   \code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
 #'   Detailed PDFs are saved to a \code{per_sample/} subfolder.
 #'
-#' @return Invisibly returns \code{NULL}. PDF plots are saved to
+#' @return Invisibly returns a \code{data.frame} with the full SI audit trail.
+#'   PDF plots and \code{SI_Audit_<rank>} files are saved to
 #'   \code{<project_dir>/001_taxa_retention/}.
 #' @export
 #' @importFrom dplyr filter select group_by summarise mutate left_join arrange
-#'   rename bind_rows pull distinct n_distinct case_when all_of
+#'   rename bind_rows pull distinct n_distinct case_when all_of lag
 #' @importFrom tidyr pivot_longer
-#' @importFrom ggplot2 ggplot aes geom_line geom_point scale_color_manual
-#'   scale_linetype_manual scale_shape_manual labs ggsave scale_y_continuous
-#'   scale_x_continuous theme guides guide_legend element_text
+#' @importFrom ggplot2 ggplot aes geom_line geom_point geom_vline geom_ribbon
+#'   scale_color_manual scale_linetype_manual scale_shape_manual labs ggsave
+#'   scale_y_continuous scale_x_continuous theme guides guide_legend element_text
 #' @importFrom patchwork plot_layout plot_annotation
 #' @importFrom scales label_number
+#' @importFrom stats median setNames
 #' @importFrom ggtext element_markdown
 #' @examples
 #' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 #'
-#' # Run the taxa retention analysis for the entire project
+#' # Group retention overlay + optimal CS (default Kneedle method)
 #' # taxa_retention(project_dir = toy_project)
 taxa_retention <- function(project_dir,
                            tax_level = "Species",
+                           method = c(
+                               "kneedle", "postcliff", "segmented",
+                               "dynamic", "manual"
+                           ),
+                           manual_toll = 1.0,
                            detail_samples = NULL) {
+    method <- match.arg(method)
     setup <- .tr_setup(project_dir)
     df_proc <- .tr_load_data(project_dir, setup$log_msg)
     DOMAINS <- names(get_kariocas_colors("domains"))
     SAMPLES <- unique(df_proc$sample)
 
-    setup$log_msg(">>> Building group overlay(s) at rank: ", tax_level)
-    .tr_group_overlay(df_proc, tax_level, DOMAINS, setup$output_dir, setup$log_msg)
+    setup$log_msg(
+        ">>> Computing Stability Index (method: ", method,
+        ") at rank: ", tax_level
+    )
+    df_rank <- dplyr::filter(df_proc, .data$Rank == tax_level)
+    audit_list <- list()
+    for (samp in SAMPLES) {
+        df_samp <- dplyr::filter(df_rank, .data$sample == samp)
+        for (dom in DOMAINS) {
+            a <- .si_domain_audit(
+                df_samp, dom, method, manual_toll, samp, setup$log_msg
+            )
+            if (!is.null(a)) audit_list[[length(audit_list) + 1]] <- a
+        }
+    }
+    full_audit <- .si_export_audit(
+        audit_list, tax_level, setup$output_dir, setup$log_msg
+    )
+
+    if (!is.null(full_audit) && nrow(full_audit) > 0) {
+        setup$log_msg(">>> Building group overlay(s)...")
+        .tr_group_overlay(
+            full_audit, DOMAINS, tax_level, method,
+            setup$output_dir, setup$log_msg
+        )
+    } else {
+        setup$log_msg("    [WARNING] No SI audit produced; skipping overlay.")
+    }
 
     detail <- .grp_resolve_detail(detail_samples, SAMPLES, setup$log_msg)
     if (length(detail) > 0) {
@@ -401,5 +457,5 @@ taxa_retention <- function(project_dir,
         }
     }
     setup$log_msg("SUCCESS: Retention analysis completed.")
-    invisible(NULL)
+    invisible(full_audit)
 }

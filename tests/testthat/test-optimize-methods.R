@@ -26,10 +26,10 @@ test_that(".ocs_postcliff_cs lands at or after the steepest drop", {
     expect_true(pc >= 30)
 })
 
-test_that("optimize_CS defaults to kneedle and accepts the new methods", {
-    expect_equal(eval(formals(optimize_CS)$method)[1], "kneedle")
+test_that("taxa_retention defaults to kneedle and accepts the new methods", {
+    expect_equal(eval(formals(taxa_retention)$method)[1], "kneedle")
     expect_true(all(
         c("kneedle", "postcliff", "segmented", "dynamic", "manual") %in%
-            eval(formals(optimize_CS)$method)
+            eval(formals(taxa_retention)$method)
     ))
 })

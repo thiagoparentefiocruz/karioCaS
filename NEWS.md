@@ -1,3 +1,17 @@
+# karioCaS 0.99.4
+
+## Changes
+
+* **`optimize_CS()` has been merged into `taxa_retention()` and removed.** The
+  two functions produced a near-identical group overlay; `taxa_retention()` now
+  computes the Stability Index in the same step, marks each domain's median
+  optimal CS on its overlay, writes the `SI_Audit_<rank>.tsv`/`.rds` tables, and
+  returns the audit data frame invisibly. It gains `method=` (default
+  `"kneedle"`) and `manual_toll=` arguments.
+* The SI audit now lives in `001_taxa_retention/`. `retrieve_selected_taxa()`
+  reads it from there, with a backward-compatible fallback to the old
+  `006_optimize_CS/` location for existing projects.
+
 # karioCaS 0.99.3
 
 ## Changes

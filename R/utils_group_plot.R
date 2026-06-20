@@ -1,9 +1,9 @@
 # ==============================================================================
 # SHARED GROUP-OVERLAY ENGINE
 # ==============================================================================
-# Reused by taxa_retention() (001), reads_per_taxa() (003) and optimize_CS()
-# (006) to draw a single per-group figure in which every sample is a faint line
-# and the group mean is a bold line with a +/-SD band, faceted 2x2 by Domain.
+# Reused by taxa_retention() (001) and reads_per_taxa() (003) to draw a single
+# per-group figure in which every sample is a faint line and the group mean is a
+# bold line with a +/-SD band, faceted 2x2 by Domain.
 # ==============================================================================
 
 #' @importFrom ggplot2 ggplot aes geom_line geom_point geom_ribbon geom_vline
@@ -59,39 +59,6 @@ NULL
         )
     }
     intersect(detail_samples, all_samples)
-}
-
-#' Per-sample taxa-retention curve normalised to each sample's lowest CS
-#'
-#' @param df_rank Long data filtered to a single rank, with columns
-#'   \code{sample}, \code{Domain}, \code{CS}, \code{Taxon_Name} (and optionally
-#'   \code{Group}).
-#' @return Data frame with \code{Group, sample, Domain, x (= CS),
-#'   y (= percent retained), Taxa_Count}.
-#' @noRd
-.grp_retention_data <- function(df_rank) {
-    if (!"Group" %in% colnames(df_rank)) {
-        df_rank$Group <- .grp_parse_group(df_rank$sample)
-    }
-    df_rank |>
-        dplyr::group_by(
-            .data$Group, .data$sample, .data$Domain, .data$CS
-        ) |>
-        dplyr::summarise(
-            Taxa_Count = dplyr::n_distinct(.data$Taxon_Name),
-            .groups = "drop"
-        ) |>
-        dplyr::group_by(.data$sample, .data$Domain) |>
-        dplyr::arrange(.data$CS, .by_group = TRUE) |>
-        dplyr::mutate(
-            Base_Taxa = .data$Taxa_Count[which.min(.data$CS)],
-            x = .data$CS,
-            y = ifelse(
-                .data$Base_Taxa > 0,
-                (.data$Taxa_Count / .data$Base_Taxa) * 100, 0
-            )
-        ) |>
-        dplyr::ungroup()
 }
 
 #' Draw one domain panel of the group overlay

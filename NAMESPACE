@@ -2,7 +2,6 @@
 
 export(heatmaps_karioCaS)
 export(import_karioCaS)
-export(optimize_CS)
 export(reads_per_taxa)
 export(retrieve_selected_taxa)
 export(taxa_resolution)

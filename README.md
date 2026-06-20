@@ -56,24 +56,21 @@ The package follows a logical, step-by-step workflow for metagenomic validation,
 **1. Data Harmonization (Step 000)**
 * `import_karioCaS()`: Standardizes raw outputs from multiple stringencies into a cohesive Bioconductor `TreeSummarizedExperiment` (TSE) object.
 
-**2. Visual Exploration (Steps 001 - 005)**
-* `taxa_retention()`: Quantifies the percentage of taxa that remain as confidence stringency increases.
+**2. Visual Exploration & Objective Thresholding (Steps 001 - 005)**
+* `taxa_retention()`: Quantifies the percentage of taxa retained as stringency increases **and** computes the objective optimal CS (Stability Index) per domain in the same step. Its group plot marks each domain's median optimal CS with a dashed line, and it writes the `SI_Audit_<rank>` tables consumed by Step 1000. Strategies (`method=`):
+  * **Kneedle (default):** Parameter-free elbow detection — finds the inflection between the steep noise-removal phase and the stable signal floor, consistently across domains.
+  * **Post-cliff:** A more conservative threshold deeper in the plateau (first stable CS after the steepest drop).
+  * **Segmented:** Broken-stick regression for regime shifts (ideal for ecology/dark matter).
+  * **Dynamic / Manual:** First CS within tail noise / expert-defined loss tolls.
 * `taxa_resolution()`: Evaluates taxonomic depth and Parent-to-Child resolution across different scores.
 * `reads_per_taxa()`: Visualizes read distribution efficiency across ranks.
 * `upset_kariocas()`: Identifies "transient" vs. "persistent" taxa.
 * `heatmaps_karioCaS()`: Detailed abundance heatmaps showing taxa extinction patterns.
 
-> **Group overlays by default.** `taxa_retention()`, `reads_per_taxa()` and `optimize_CS()` now draw a single figure **per biological group** instead of one set of PDFs per sample: every sample is a faint line and the group mean (± SD) is highlighted, faceted by Domain. Groups are inferred from sample names by stripping trailing digits (e.g. `SAMPLE33`, `SAMPLE34` → group `SAMPLE`; `CONTROL01`, `TREATED01` → `CONTROL`, `TREATED`). Use `detail_samples=` to also render detailed per-sample panels into a `per_sample/` subfolder: `NULL` (default) = group only, `"all"` = every sample, or a comma-separated list such as `"SAMPLE33, SAMPLE45"`.
+> **Group overlays by default.** `taxa_retention()` and `reads_per_taxa()` draw a single figure **per biological group** instead of one set of PDFs per sample: every sample is a faint line and the group mean (± SD) is highlighted, faceted by Domain. Groups are inferred from sample names by stripping trailing digits (e.g. `SAMPLE33`, `SAMPLE34` → group `SAMPLE`; `CONTROL01`, `TREATED01` → `CONTROL`, `TREATED`). Use `detail_samples=` to also render detailed per-sample panels into a `per_sample/` subfolder: `NULL` (default) = group only, `"all"` = every sample, or a comma-separated list such as `"SAMPLE33, SAMPLE45"`.
 
-**3. Objective Thresholding (Step 006)**
-* `optimize_CS()`: The core mathematical engine. Replaces subjective thresholding with a Multi-Strategy Stability Index (SI). The default group overlay also marks each domain's **median Primary SI** as a dashed reference line, turning the figure into a group-wide decision plot. Strategies (`method=`):
-  * **Kneedle (default):** Parameter-free elbow detection — finds the inflection between the steep noise-removal phase and the stable signal floor, consistently across domains.
-  * **Post-cliff:** A more conservative threshold deeper in the plateau (first stable CS after the steepest drop).
-  * **Segmented:** Broken-stick regression for regime shifts (ideal for ecology/dark matter).
-  * **Dynamic / Manual:** First CS within tail noise / expert-defined loss tolls.
-
-**4. The Ultimate Biological Mosaic (Step 1000)**
-* `retrieve_selected_taxa()`: Seamlessly integrates with the `optimize_CS` audit file to extract surviving taxa based on domain-specific mathematical thresholds. Generates a highly refined, high-confidence `.mpa` file, scrubbed of statistical noise and ready for downstream analysis.
+**3. The Ultimate Biological Mosaic (Step 1000)**
+* `retrieve_selected_taxa()`: Reads the `SI_Audit` produced by `taxa_retention()` to extract surviving taxa based on domain-specific mathematical thresholds. Generates a highly refined, high-confidence `.mpa` file, scrubbed of statistical noise and ready for downstream analysis.
 
 ## 📖 Quick Example
 
@@ -85,12 +82,13 @@ proj_dir <- "path/to/your_project"
 # 1. Harmonize Data
 import_karioCaS(project_dir = proj_dir)
 
-# 2. Visual Exploration 
+# 2. Visual Exploration + Objective Thresholding
 
-    # Taxa retention — one group-overlay figure per biological group (default)
+    # Taxa retention overlay + optimal CS (Stability Index) per group — one
+    # figure + the SI_Audit tables. Default method = Kneedle elbow.
       taxa_retention(project_dir = proj_dir)
 
-    # ...or also drill into specific samples (detailed PDFs in per_sample/)
+    # ...drill into specific samples (detailed PDFs in per_sample/)
       taxa_retention(project_dir = proj_dir, detail_samples = "SAMPLE33, SAMPLE45")
 
     # Evaluate the taxa "persistance" over increasing Confidence Scores 
@@ -105,11 +103,7 @@ import_karioCaS(project_dir = proj_dir)
     # Evaluate taxa extinction patterns
       heatmaps_karioCaS(project_dir = proj_dir)
 
-# 3. Optimize Confidence Scores (Objective Mathematics)
-# Group decision plot + per-sample Stability Index audit (saved as TSV/RDS)
-optimize_CS(project_dir = proj_dir, tax_level = "Species") # default: Kneedle elbow
-
-# 4. Retrieve the Final Biological Mosaic
+# 3. Retrieve the Final Biological Mosaic
 # Uses mathematically optimal thresholds for Bacteria and Archaea, 
 # and manual overrides for Eukaryota and Viruses.
 retrieve_selected_taxa(

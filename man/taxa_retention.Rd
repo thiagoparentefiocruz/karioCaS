@@ -2,15 +2,27 @@
 % Please edit documentation in R/kariocas_001_taxa_retention.R
 \name{taxa_retention}
 \alias{taxa_retention}
-\title{Run Confidence Score Retention Analysis (Step 001)}
+\title{Run Confidence Score Retention & Optimization (Step 001)}
 \usage{
-taxa_retention(project_dir, tax_level = "Species", detail_samples = NULL)
+taxa_retention(
+  project_dir,
+  tax_level = "Species",
+  method = c("kneedle", "postcliff", "segmented", "dynamic", "manual"),
+  manual_toll = 1,
+  detail_samples = NULL
+)
 }
 \arguments{
 \item{project_dir}{Root path of the project.}
 
-\item{tax_level}{Taxonomic rank used for the group overlay
+\item{tax_level}{Taxonomic rank used for the group overlay and SI
 (default: \code{"Species"}).}
+
+\item{method}{Optimal-CS strategy. One of \code{"kneedle"} (default),
+\code{"postcliff"}, \code{"segmented"}, \code{"dynamic"}, or \code{"manual"}.}
+
+\item{manual_toll}{Numeric or named list. Acceptable step-wise loss percentage,
+used only when \code{method = "manual"} (default: 1.0).}
 
 \item{detail_samples}{Which samples to also render as detailed per-sample
 panels. \code{NULL} (default) writes only the group overlay; \code{"all"}
@@ -19,23 +31,33 @@ renders every sample; a comma-separated string such as
 Detailed PDFs are saved to a \code{per_sample/} subfolder.}
 }
 \value{
-Invisibly returns \code{NULL}. PDF plots are saved to
+Invisibly returns a \code{data.frame} with the full SI audit trail.
+  PDF plots and \code{SI_Audit_<rank>} files are saved to
   \code{<project_dir>/001_taxa_retention/}.
 }
 \description{
-Executes taxa retention analysis based on Confidence Score (Kraken/Bracken).
-By default it produces a single, low-clutter \strong{group overlay} per
-biological group: every sample of the group is drawn as a faint line with the
-group mean (\eqn{\pm}SD) highlighted, faceted by Domain. Detailed per-sample
-panels (all ranks, taxa vs reads) are written only on request.
+Executes taxa retention analysis based on Confidence Score (Kraken/Bracken)
+and, in the same step, computes the objective optimal CS (Stability Index, SI)
+for each domain. By default it produces a single, low-clutter \strong{group
+overlay} per biological group: every sample of the group is drawn as a faint
+line with the group mean (\eqn{\pm}SD) highlighted and each domain's median
+optimal CS marked with a dashed line, faceted by Domain. It also writes the
+machine-readable SI audit (\code{SI_Audit_<rank>.tsv}/\code{.rds}) used by
+\code{\link{retrieve_selected_taxa}}. Detailed per-sample panels (all ranks,
+taxa vs reads) are written only on request.
 }
 \details{
 Groups are inferred from sample names by stripping trailing digits
 (e.g. \code{SAMPLE33}, \code{SAMPLE34} both belong to group \code{SAMPLE}).
+
+The optimal CS is found with a multi-strategy engine: \code{"kneedle"}
+(default, parameter-free elbow detection), \code{"postcliff"} (a more
+conservative threshold past the steepest drop), \code{"segmented"}
+(broken-stick regression), \code{"dynamic"}, or \code{"manual"}.
 }
 \examples{
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
-# Run the taxa retention analysis for the entire project
+# Group retention overlay + optimal CS (default Kneedle method)
 # taxa_retention(project_dir = toy_project)
 }

@@ -16,9 +16,10 @@ test_that("retrieve_selected_taxa applies UX logic correctly", {
   file.copy(list.files(mock_data_src, full.names = TRUE), 
             file.path(temp_proj_dir, "000_mpa_original"))
   
-  # 3. Execução dos pré-requisitos (Importação e Otimização) em modo silencioso
+  # 3. Execução dos pré-requisitos (Importação e SI) em modo silencioso.
+  # taxa_retention() agora computa o SI audit (Step 001).
   suppressMessages(import_karioCaS(project_dir = temp_proj_dir))
-  suppressMessages(optimize_CS(project_dir = temp_proj_dir, tax_level = "Species"))
+  suppressMessages(taxa_retention(project_dir = temp_proj_dir, tax_level = "Species"))
   
   # 4. Rodar o Mosaico Final (Testando auto, secondary e manual numérico simultaneamente)
   expect_message(

@@ -75,14 +75,21 @@
     }
     log_msg("STEP 1.5: Loading SI Audit Data...")
     audit_tax <- if (is.null(tax_level)) "Species" else tax_level
-    audit_file <- file.path(
-        project_dir, "006_optimize_CS",
-        paste0("SI_Audit_", audit_tax, ".rds")
-    )
+    audit_name <- paste0("SI_Audit_", audit_tax, ".rds")
+    audit_file <- file.path(project_dir, "001_taxa_retention", audit_name)
     if (!file.exists(audit_file)) {
-        log_msg("  [WARNING] Audit file not found: ", audit_file)
-        log_msg("  Ensure you ran optimize_CS() (Step 006). Fallback to CS = 0.")
-        return(NULL)
+        # Backward compatibility: audit used to live in 006_optimize_CS/.
+        legacy_file <- file.path(project_dir, "006_optimize_CS", audit_name)
+        if (file.exists(legacy_file)) {
+            audit_file <- legacy_file
+        } else {
+            log_msg("  [WARNING] Audit file not found: ", audit_file)
+            log_msg(
+                "  Ensure you ran taxa_retention() (Step 001).",
+                " Fallback to CS = 0."
+            )
+            return(NULL)
+        }
     }
     audit_df <- readRDS(audit_file)
     log_msg("  -> SI Audit loaded successfully for level: ", audit_tax)
