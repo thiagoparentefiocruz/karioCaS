@@ -28,19 +28,29 @@
     list(output_dir = output_dir, log_msg = log_msg)
 }
 
+#' Adaptive read-count cutoffs for a saturation curve.
+#'
+#' Always includes the low-end anchors \code{1, 2, 3, 4, 5, 7, 10} (even when the
+#' maximum read count is smaller), then adds log-spaced points
+#' (\code{1, 2, 3, 5, 7} x 10^k) up to and just past \code{max_count}. This gives
+#' fine resolution at the low end (where rare/background taxa are shed) while
+#' adapting the upper range to the actual data instead of a hard-coded ceiling.
+#' @param max_count Maximum read count in the sample/domain.
+#' @return A sorted numeric vector of cutoffs.
 #' @noRd
-.rpt_cutoff_template <- function() {
-    base_steps <- c(1, 3, 5)
-    multipliers <- c(1, 10, 100, 1000, 10000, 100000, 1000000)
-    sort(unique(as.vector(outer(base_steps, multipliers, "*"))))
-}
-
-#' Read-count cutoffs relevant to one sample/domain (truncated to its range).
-#' @noRd
-.rpt_sample_cutoffs <- function(max_count, cutoffs_sat) {
-    ct <- cutoffs_sat[cutoffs_sat <= max_count]
-    nxt <- cutoffs_sat[cutoffs_sat > max_count][1]
-    if (!is.na(nxt)) c(ct, nxt) else ct
+.rpt_cutoffs_for <- function(max_count) {
+    anchors <- c(1, 2, 3, 4, 5, 7, 10)
+    if (!is.finite(max_count) || max_count <= 10) {
+        return(anchors)
+    }
+    mult <- c(1, 2, 3, 5, 7)
+    decades <- 10^seq_len(ceiling(log10(max_count)))
+    hi <- sort(unique(as.vector(outer(mult, decades))))
+    hi <- hi[hi > 10]
+    keep <- hi[hi <= max_count]
+    nxt <- hi[hi > max_count][1]
+    if (!is.na(nxt)) keep <- c(keep, nxt)
+    sort(unique(c(anchors, keep)))
 }
 
 # ------------------------------------------------------------------------------
@@ -50,14 +60,14 @@
 #' Per-sample saturation curves + per-sample optimal-reads audit, one domain.
 #' @return list(overlay = long df for plotting, audit = tagged SI rows).
 #' @noRd
-.rpt_cs_domain <- function(df_cs_dom, cutoffs_sat, method, cs, dom) {
+.rpt_cs_domain <- function(df_cs_dom, method, cs, dom) {
     samples <- unique(df_cs_dom$sample)
     overlay <- list()
     audit <- list()
     for (s in samples) {
         df_s <- dplyr::filter(df_cs_dom, .data$sample == s)
         if (nrow(df_s) == 0) next
-        cutoffs <- .rpt_sample_cutoffs(max(df_s$Counts), cutoffs_sat)
+        cutoffs <- .rpt_cutoffs_for(max(df_s$Counts))
         if (length(cutoffs) == 0) next
         total <- nrow(df_s)
         surv <- vapply(cutoffs, function(k) sum(df_s$Counts >= k), numeric(1))
@@ -116,7 +126,7 @@
 }
 
 #' @noRd
-.rpt_group_analysis <- function(df_proc, CS_LIST, DOMAINS, cutoffs_sat,
+.rpt_group_analysis <- function(df_proc, CS_LIST, DOMAINS,
                                 analysis_level, method, output_dir, log_msg) {
     audit_all <- list()
     for (grp in unique(df_proc$Group)) {
@@ -128,7 +138,7 @@
                 df_cs_dom <- dplyr::filter(
                     df_grp, .data$CS == cs, .data$Domain == dom, .data$Counts > 0
                 )
-                .rpt_cs_domain(df_cs_dom, cutoffs_sat, method, cs, dom)
+                .rpt_cs_domain(df_cs_dom, method, cs, dom)
             })
             overlay <- dplyr::bind_rows(lapply(res, `[[`, "overlay"))
             audit <- dplyr::bind_rows(lapply(res, `[[`, "audit"))
@@ -171,7 +181,7 @@
 }
 
 #' @noRd
-.rpt_detail_domain_plot <- function(df_curr, dom, analysis_level, cutoffs_sat) {
+.rpt_detail_domain_plot <- function(df_curr, dom, analysis_level) {
     df_dom <- dplyr::filter(df_curr, .data$Domain == dom, .data$Counts > 0)
     x_lab <- get_kariocas_labels()$x_log10_reads
     if (nrow(df_dom) == 0) {
@@ -180,7 +190,7 @@
     total_reads <- sum(df_dom$Counts)
     total_taxa <- nrow(df_dom)
     max_val <- max(df_dom$Counts)
-    cutoffs <- .rpt_sample_cutoffs(max_val, cutoffs_sat)
+    cutoffs <- .rpt_cutoffs_for(max_val)
     df_stats <- .rpt_calc_stats(df_dom, cutoffs, total_reads, total_taxa)
     df_plot <- df_stats |>
         tidyr::pivot_longer(
@@ -241,14 +251,14 @@
 
 #' @noRd
 .rpt_detail_cs <- function(df_proc, samp, cs, DOMAINS, analysis_level,
-                           cutoffs_sat, output_dir, log_msg) {
+                           output_dir, log_msg) {
     df_curr <- dplyr::filter(df_proc, .data$sample == samp, .data$CS == cs)
     if (nrow(df_curr) == 0) {
         return(invisible(NULL))
     }
     plots <- stats::setNames(
         lapply(DOMAINS, function(dom) {
-            .rpt_detail_domain_plot(df_curr, dom, analysis_level, cutoffs_sat)
+            .rpt_detail_domain_plot(df_curr, dom, analysis_level)
         }),
         DOMAINS
     )
@@ -344,13 +354,12 @@ reads_per_taxa <- function(project_dir,
     SAMPLES <- unique(df_proc$sample)
     DOMAINS <- names(get_kariocas_colors("domains"))
     CS_LIST <- sort(unique(df_proc$CS))
-    cutoffs_sat <- .rpt_cutoff_template()
 
     setup$log_msg(
         ">>> Saturation + optimal reads (method: ", method, ")..."
     )
     full_audit <- .rpt_group_analysis(
-        df_proc, CS_LIST, DOMAINS, cutoffs_sat,
+        df_proc, CS_LIST, DOMAINS,
         analysis_level, method, setup$output_dir, setup$log_msg
     )
     if (!is.null(full_audit) && nrow(full_audit) > 0) {
@@ -377,7 +386,7 @@ reads_per_taxa <- function(project_dir,
             for (cs in CS_LIST) {
                 .rpt_detail_cs(
                     df_proc, samp, cs, DOMAINS, analysis_level,
-                    cutoffs_sat, detail_dir, setup$log_msg
+                    detail_dir, setup$log_msg
                 )
             }
         }

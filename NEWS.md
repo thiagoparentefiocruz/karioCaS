@@ -1,3 +1,14 @@
+# karioCaS 0.99.11
+
+## Changes
+
+* `reads_per_taxa()` saturation cutoffs are now **adaptive** instead of a
+  hard-coded grid. The x-axis always includes the low-end anchors
+  `1, 2, 3, 4, 5, 7, 10` (even when the maximum read count is smaller) and adds
+  log-spaced points (`1, 2, 3, 5, 7` x 10^k) up to just past each sample/domain's
+  actual maximum. This gives finer resolution where rare/background taxa are shed
+  and adapts the upper range to the data.
+
 # karioCaS 0.99.10
 
 ## Changes

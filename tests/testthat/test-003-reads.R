@@ -1,6 +1,20 @@
 # tests/testthat/test-003-reads.R
 # reads_per_taxa(): saturation-only group overlays + optimal-minimum-reads audit.
 
+test_that(".rpt_cutoffs_for always includes low anchors and adapts the top", {
+    f <- karioCaS:::.rpt_cutoffs_for
+    anchors <- c(1, 2, 3, 4, 5, 7, 10)
+    # Low anchors present even when max reads < 10
+    expect_equal(f(3), anchors)
+    expect_equal(f(8), anchors)
+    # Above 10: log-spaced up to just past max, anchors still present
+    out <- f(250)
+    expect_true(all(anchors %in% out))
+    expect_true(max(out) >= 250) # extends past the data max
+    expect_true(all(out > 0))
+    expect_false(is.unsorted(out))
+})
+
 test_that(".si_reads_elbow finds a low-count elbow on a singleton-heavy curve", {
     # Many taxa vanish by a few reads (rare tail), then a stable core persists.
     cutoffs <- c(1, 3, 5, 10, 30, 100, 1000)
