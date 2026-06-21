@@ -1,3 +1,16 @@
+# karioCaS 0.99.12
+
+## New Features
+
+* `group_upset()`: new analysis that, for each biological group (inferred from
+  sample-name prefixes), draws a cross-sample UpSet plot at a chosen rank and
+  writes a membership TSV (presence matrix + `N_Samples` and a
+  Core/Shared/Unique `Category`). This separates the **core** taxa shared by all
+  samples of a group from **unique**/rare taxa present in one or a few samples -
+  the expected pattern for pathogens and false positives. Default source is the
+  final mosaic from `retrieve_selected_taxa()`; pass `CS=` to compare at a single
+  Confidence Score. Output: `<project_dir>/006_group_upset/`.
+
 # karioCaS 0.99.11
 
 ## Changes

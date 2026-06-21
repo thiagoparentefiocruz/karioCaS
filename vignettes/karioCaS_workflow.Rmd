@@ -152,6 +152,13 @@ The resulting `SAMPLENAME_karioCaS_Mosaic.mpa` file, saved in the `1000_final_se
 
 Finally, `taxa_resolution(project_dir = proj_dir)` (with no `CS`) inspects the Parent-to-Child resolution of this final mosaic. The mosaic always retains every taxonomic rank, so this works out of the box.
 
+When a study has several samples per biological group (named with a shared prefix, e.g. `CONTROL01`, `CONTROL02`), `group_upset()` compares the taxa **across the samples of each group** and writes both an UpSet plot and a membership table separating **core** taxa (present in every sample) from **unique**/rare taxa (one or a few samples) - the expected signature of pathogens and false positives. Like `taxa_resolution()`, it uses the final mosaic by default, or a single `CS`:
+
+```{r group_upset, eval=FALSE}
+# Needs >= 2 samples per group; uses the final mosaic by default.
+group_upset(project_dir = proj_dir)
+```
+
 ```{r cleanup, include=FALSE}
 # Clean up temporary directory
 unlink(proj_dir, recursive = TRUE)

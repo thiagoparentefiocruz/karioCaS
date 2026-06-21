@@ -63,6 +63,7 @@ The package follows a logical, step-by-step workflow for metagenomic validation,
   * **Segmented:** Broken-stick regression for regime shifts (ideal for ecology/dark matter).
   * **Dynamic / Manual:** First CS within tail noise / expert-defined loss tolls.
 * `taxa_resolution()`: Evaluates taxonomic depth (Parent-to-Child resolution). By default it analyzes the **final mosaic** (`retrieve_selected_taxa()` output) — one figure per sample; pass `CS=` to instead analyze the imported data at a single Confidence Score.
+* `group_upset()`: Cross-sample UpSet **within each biological group** (inferred from name prefixes) — separates **core** taxa (in every sample) from **unique**/rare taxa (in one or a few samples), the expected pattern for pathogens and false positives. Writes a membership TSV (presence matrix + Core/Shared/Unique category). Default source is the final mosaic; `CS=` compares at a single Confidence Score.
 * `reads_per_taxa()`: Saturation analysis on a log read axis. Computes the **optimal minimum reads** per domain (the saturation-curve elbow, via the same engine as the optimal CS), marks each domain's median on the group plot, and writes `Reads_Audit_<rank>` tables — a quantitative threshold for excluding low-abundance background/false-positive taxa.
 * `upset_kariocas()`: Identifies "transient" vs. "persistent" taxa.
 * `heatmaps_karioCaS()`: Detailed abundance heatmaps showing taxa extinction patterns.
@@ -119,4 +120,7 @@ retrieve_selected_taxa(
 # 4. Inspect Parent-to-Child resolution of the FINAL mosaic (default source)
 #    (the mosaic always keeps all ranks, so resolution works out of the box)
 taxa_resolution(project_dir = proj_dir)
+
+# 5. Core vs unique taxa across samples within each biological group
+group_upset(project_dir = proj_dir)
 ```
