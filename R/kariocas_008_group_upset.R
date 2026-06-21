@@ -45,8 +45,13 @@
     if (is.null(CS)) {
         log_msg(">>> Source: Final Mosaic (004_final_mosaic)...")
         mdir <- .kcs_path(project_dir, "004_final_mosaic", "1000_final_selection")
+        tsv_dir <- if (dir.exists(file.path(mdir, "tsv"))) {
+            file.path(mdir, "tsv")
+        } else {
+            mdir
+        }
         files <- list.files(
-            mdir, pattern = "_karioCaS_Mosaic\\.tsv$", full.names = TRUE
+            tsv_dir, pattern = "_karioCaS_Mosaic\\.tsv$", full.names = TRUE
         )
         if (length(files) == 0) {
             stop(

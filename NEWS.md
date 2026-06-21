@@ -1,3 +1,16 @@
+# karioCaS 0.99.14
+
+## Changes
+
+* `retrieve_selected_taxa()` now writes the mosaic files into two subfolders of
+  `004_final_mosaic/`: `.mpa` files in `mpa/` and `.tsv` files in `tsv/`. The
+  downstream readers (`taxa_resolution()`, `group_upset()`) look in `tsv/` with a
+  fallback to the flat folder for older projects.
+* Renamed the package source files to match the new step order and function
+  names (e.g. `kariocas_000_import.R` -> `kariocas_001_import.R`,
+  `kariocas_1000_reliable_mpa.R` -> `kariocas_004_retrieve_selected_taxa.R`);
+  test files renamed to match.
+
 # karioCaS 0.99.13
 
 ## Changes

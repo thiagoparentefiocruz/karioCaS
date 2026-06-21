@@ -278,11 +278,15 @@
         dplyr::summarise(Counts = sum(.data$Counts), .groups = "drop") |>
         dplyr::rename(!!samp := "Counts")
     base_name <- paste0(samp, "_karioCaS_Mosaic")
-    readr::write_delim(final_df, file.path(output_dir, paste0(base_name, ".mpa")),
+    mpa_dir <- file.path(output_dir, "mpa")
+    tsv_dir <- file.path(output_dir, "tsv")
+    if (!dir.exists(mpa_dir)) dir.create(mpa_dir, recursive = TRUE)
+    if (!dir.exists(tsv_dir)) dir.create(tsv_dir, recursive = TRUE)
+    readr::write_delim(final_df, file.path(mpa_dir, paste0(base_name, ".mpa")),
         delim = "\t"
     )
-    readr::write_tsv(final_df, file.path(output_dir, paste0(base_name, ".tsv")))
-    log_msg("    -> GENERATED: ", base_name, ".mpa")
+    readr::write_tsv(final_df, file.path(tsv_dir, paste0(base_name, ".tsv")))
+    log_msg("    -> GENERATED: mpa/", base_name, ".mpa")
     TRUE
 }
 
@@ -322,8 +326,9 @@
 #' @param CS_V Character or numeric. CS for Viruses. Default: \code{"auto"}.
 #' @param reads_min_V Minimum reads for Viruses. Default: 0.
 #'
-#' @return Invisibly returns \code{TRUE}. Mosaic \code{.mpa} and \code{.tsv}
-#'   files are saved to \code{<project_dir>/004_final_mosaic/}.
+#' @return Invisibly returns \code{TRUE}. Mosaic files are saved to
+#'   \code{<project_dir>/004_final_mosaic/}, with \code{.mpa} files under
+#'   \code{mpa/} and \code{.tsv} files under \code{tsv/}.
 #' @export
 #' @importFrom readr read_rds write_tsv write_delim
 #' @importFrom dplyr filter mutate select group_by summarise bind_rows

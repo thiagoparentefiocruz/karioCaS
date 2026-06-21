@@ -38,14 +38,18 @@ test_that("retrieve_selected_taxa applies UX logic correctly", {
     # 5. Auditoria do Output Final
     out_dir <- file.path(temp_proj_dir, "004_final_mosaic")
 
-    # A. Os arquivos finais foram gerados?
-    expect_true(file.exists(file.path(out_dir, "SAMPLE01_karioCaS_Mosaic.mpa")))
-    expect_true(file.exists(file.path(out_dir, "SAMPLE01_karioCaS_Mosaic.tsv")))
+    # A. Os arquivos finais foram gerados? (.mpa em mpa/, .tsv em tsv/)
+    expect_true(file.exists(
+        file.path(out_dir, "mpa", "SAMPLE01_karioCaS_Mosaic.mpa")
+    ))
+    expect_true(file.exists(
+        file.path(out_dir, "tsv", "SAMPLE01_karioCaS_Mosaic.tsv")
+    ))
 
     # B. The mosaic keeps ALL ranks even though tax_level = "Species" was given
     #    (tax_level no longer filters the output).
     m <- read.delim(
-        file.path(out_dir, "SAMPLE01_karioCaS_Mosaic.tsv"),
+        file.path(out_dir, "tsv", "SAMPLE01_karioCaS_Mosaic.tsv"),
         check.names = FALSE
     )
     tax <- as.character(m[[1]])
@@ -89,7 +93,9 @@ test_that("retrieve_selected_taxa pulls optimal min-reads from Reads_Audit", {
         "SUCCESS: Process completed."
     )
     out_dir <- file.path(temp_proj_dir, "004_final_mosaic")
-    expect_true(file.exists(file.path(out_dir, "SAMPLE01_karioCaS_Mosaic.mpa")))
+    expect_true(file.exists(
+        file.path(out_dir, "mpa", "SAMPLE01_karioCaS_Mosaic.mpa")
+    ))
 
     unlink(temp_proj_dir, recursive = TRUE)
 })
