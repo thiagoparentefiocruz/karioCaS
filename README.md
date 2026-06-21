@@ -5,124 +5,133 @@
 
 **Kraken Confidence Scores for Reliable Domain-Specific Microbiota Inference and Discovery**
 
-**karioCaS** is an R package designed to enhance the reliability and clarity of metagenomic data analysis originating from Kraken2 (or any k-mer based classifier). It prevents the hyper-inflation of false-positive assignments by providing a robust analytical framework to evaluate taxonomic stability across multiple stringency levels.
+> Turn the noisy output of k-mer classifiers into a defensible, high-confidence microbial profile — with thresholds chosen by the data, not by guesswork.
 
-**karioCaS** offers two distinct approaches to deep-diving into metagenomic data:
+## ✨ Why karioCaS?
 
-**1. Domain-Specific Analysis:** Based on the principle that "one size does **not** fit all," all analyses and visualizations are performed individually by Biological Domain (**Archaea, Bacteria, Eukaryota, and Viruses**).
+k-mer classifiers such as Kraken2 are blazing fast but notoriously **hyper-inflate false positives** — thousands of taxa end up with a handful of reads each. The usual remedy, a single global Confidence Score (CS) for the whole sample, is a blunt instrument: **Bacteria, Archaea, Eukaryota and Viruses** differ wildly in database representation, genome size and k-mer uniqueness. **One size does not fit all.**
 
-**2. Confidence Score Exploration:** We leverage a crucial yet underutilized Kraken parameter—the **Confidence Score (CS)**. 
+karioCaS makes the cleanup **objective, reproducible, and domain-specific** by deriving *two* data-driven thresholds for every domain:
 
-With **karioCaS**, users can objectively identify the optimal Confidence Score unique to each Domain and appropriate to their project goals, finding the exact mathematical inflection point to separate statistical noise from true biological signal (Biological Dark Matter).
+* 🎯 **Optimal Confidence Score** — the exact mathematical inflection point where extra stringency stops removing statistical noise and starts deleting true biological signal (the *Biological Dark Matter*).
+* 🔢 **Optimal minimum number of reads** — the saturation-curve elbow below which taxa are indistinguishable from background.
+
+It then assembles a **biological mosaic**: the taxa that survive each domain's own optimal CS *and* read cutoff — a refined, high-confidence profile ready for downstream ecological or clinical analysis. Every step also produces **publication-ready, per-group figures**.
+
+* **Objective thresholds** — no more eyeballing a cutoff; the numbers come from the decay/saturation curves.
+* **Domain-aware** — each domain is analyzed separately, so rare domains aren't drowned out by Bacteria.
+* **Group-aware** — samples from the same biological group are overlaid on one figure, and **core** vs **unique** taxa are surfaced (the expected pathogen / false-positive signature).
+* **Bioconductor-native** — your data lives in a `TreeSummarizedExperiment`.
 
 ## 🚀 Installation
 
-You can install the development version of **karioCaS** directly from GitHub:
-
 ```r
-install.packages("devtools")
+# install.packages("devtools")
 devtools::install_github("thiagoparentefiocruz/karioCaS")
+library(karioCaS)
 ```
-*(Note: karioCaS is currently under preparation for Bioconductor submission).*
+*(karioCaS is currently under preparation for Bioconductor submission.)*
 
-## 📁 Strict Folder Architecture
+## 📁 Folder Architecture
 
-**IMPORTANT:** The package requires a specific directory structure to function correctly. You must place your raw Metaphlan-style outputs inside a base directory, specifically within a folder named `000_mpa_original`.
+karioCaS reads one input folder and writes everything else for you. Place your Kraken2 / MetaPhlAn-style reports inside a folder named **`000_mpa_original`** at your project root — one file per sample × Confidence Score:
 
 ```text
 YOUR_PROJECT_DIR/
  └── 000_mpa_original/
-      ├── SAMPLE01_CS00.mpa
-      ├── SAMPLE01_CS05.mpa
-      └── SAMPLE01_CS10.mpa
+      ├── SAMPLE01_CS00.mpa      # CS 0.0  (most permissive)
+      ├── SAMPLE01_CS50.mpa      # CS 0.5
+      └── SAMPLE01_CS100.mpa     # CS 1.0  (most stringent)
 ```
 
-**File naming rules:**
-1. **SAMPLE:** Any name (DO NOT use underscores `_` in the sample name itself).
-2. **_CS:** **Must** be present.
-3. **XX:** The Confidence Score. karioCaS accepts three equivalent notations:
-   * **Percentage** (recommended): `CS00` = 0.0, `CS40` = 0.4, `CS90` = 0.9, `CS100` = 1.0.
-   * **Legacy 0.1-step shorthand:** the zero-padded `CS00`–`CS10`, where `CS09` = 0.9 and `CS10` = 1.0. *(Note: `CS05` resolves to 0.5, not 0.05.)*
-   * **Explicit decimal:** `CS0.0`, `CS0.05`, `CS0.9`, `CS1.0`.
+**File naming rules**
 
-*Quick note on CS values: A CS = 0.1 means at least 10% of the k-mers from a read must map identically to a genome for assignment. A CS = 0.0 assigns a read if even a single k-mer maps (highest sensitivity, highest noise); a CS = 1.0 requires every k-mer to agree (maximum stringency).*
+1. **Sample name:** anything you like, but **no underscores** in the sample name itself.
+2. **`_CS` separator:** must be present.
+3. **Confidence Score:** written as a **percentage** (recommended) — `CS00` = 0.0, `CS40` = 0.4, `CS90` = 0.9, `CS100` = 1.0 — or as an **explicit decimal** (`CS0.0`, `CS0.05`, `CS0.9`, `CS1.0`).
 
-*Function arguments such as `confidence_score=` and `CS_B=` accept either a Kraken fraction in `(0, 1]` (e.g. `1.0` for maximum stringency) or a percentage `> 1` (e.g. `40`).*
+> A CS of 0.1 means at least 10% of a read's k-mers must map to the same genome; CS 0.0 keeps a read if even a single k-mer maps (maximum sensitivity, maximum noise), while CS 1.0 requires every k-mer to agree (maximum stringency). Samples are grouped automatically by name prefix (`SAMPLE01`, `SAMPLE02` → group `SAMPLE`; `CONTROL01`, `TREATED01` → `CONTROL`, `TREATED`).
 
-## 🛠️ Key Features & Workflow
+Function arguments such as `confidence_score=` and `CS_B=` accept either a Kraken fraction in `(0, 1]` (e.g. `1.0` for maximum stringency) or a percentage `> 1` (e.g. `40`).
 
-The package follows a logical, step-by-step workflow for metagenomic validation, automatically organizing outputs into dynamically generated subfolders:
+## 🛠️ The Workflow
 
-Outputs are organized into numbered subfolders that follow the analysis logic: **harmonize → quantify the optima → decide → describe → interpret**.
+Outputs are organized into numbered subfolders that follow the analysis logic — **harmonize → quantify the optima → decide → describe → interpret**:
 
-**1. Harmonization → `001_imported_matrix`**
-* `import_karioCaS()`: Standardizes raw outputs from multiple stringencies into a cohesive Bioconductor `TreeSummarizedExperiment` (TSE) — the dataset every other function reads.
+**1. Harmonize → `001_imported_matrix`**
+* `import_karioCaS()` — standardizes the multi-stringency reports into one Bioconductor `TreeSummarizedExperiment`, the dataset every other function reads.
 
-**2. Analytical — objective thresholds → `002_taxa_retention`, `003_reads_saturation`**
-* `taxa_retention()`: Quantifies taxa retained as stringency increases **and** computes the optimal CS (Stability Index) per domain; marks each domain's median optimal CS on the group plot and writes the `SI_Audit_<rank>` tables. Strategies (`method=`): **Kneedle** (default, parameter-free elbow), **Post-cliff** (conservative), **Segmented** (broken-stick), **Dynamic / Manual**.
-* `reads_per_taxa()`: Saturation analysis on a log read axis; computes the **optimal minimum reads** per domain (saturation-curve elbow, same engine as the optimal CS), marks each domain's median, and writes `Reads_Audit_<rank>` tables — a quantitative threshold for excluding low-abundance background/false-positive taxa.
+**2. Quantify the optima → `002_taxa_retention`, `003_reads_saturation`**
+* `taxa_retention()` — taxa-retention decay curves **and** the optimal CS per domain (Stability Index). Marks each domain's median optimal CS on the group plot and writes the `SI_Audit` tables. Strategies (`method=`): **Kneedle** (default, parameter-free elbow), **Post-cliff** (conservative), **Segmented** (broken-stick), **Dynamic / Manual**.
+* `reads_per_taxa()` — saturation analysis on a log read axis **and** the optimal minimum reads per domain (same elbow engine). Writes the `Reads_Audit` tables.
 
-**3. Decision — the biological mosaic → `004_final_mosaic`**
-* `retrieve_selected_taxa()`: Extracts surviving taxa per domain using **both** data-driven thresholds — optimal CS (`SI_Audit`) and optimal minimum reads (`Reads_Audit`), looked up at the resolved CS. `CS_*` and `reads_min_*` each accept `"auto"`, `"secondary"`, or a manual value. Always keeps **all** taxonomic ranks. Generates a high-confidence `.mpa`, scrubbed of statistical noise.
+**3. Decide → `004_final_mosaic`**
+* `retrieve_selected_taxa()` — builds the biological mosaic using **both** thresholds per domain (optimal CS and optimal min-reads, looked up together). `CS_*` and `reads_min_*` each accept `"auto"`, `"secondary"`, or a manual value. Writes `mpa/` and `tsv/` profiles, keeping **all** taxonomic ranks.
 
-**4. Descriptive diagnostics → `005_taxa_intersections_across_CS`, `006_relative_abundance_across_CS`**
-* `upset_kariocas()`: UpSet of taxon persistence **across Confidence Scores** (per sample/domain, chosen `tax_level`).
-* `heatmaps_karioCaS()`: Relative-abundance heatmaps showing taxa extinction patterns across CS.
+**4. Describe → `005_taxa_intersections_across_CS`, `006_relative_abundance_across_CS`**
+* `upset_kariocas()` — UpSet of taxon persistence **across Confidence Scores** (per sample/domain).
+* `heatmaps_karioCaS()` — relative-abundance heatmaps showing taxa extinction patterns across CS.
 
-**5. Biological insight (from the final mosaic) → `007_taxa_resolution`, `008_taxa_intersections_across_samples`**
-* `taxa_resolution()`: Parent-to-Child resolution of the final mosaic (or a single `CS=`).
-* `group_upset()`: Cross-sample UpSet **within each biological group** — separates **core** taxa (in every sample) from **unique**/rare taxa (the pathogen / false-positive pattern); writes a membership TSV (presence matrix + Core/Shared/Unique). Default source is the final mosaic; `CS=` compares at a single Confidence Score.
+**5. Interpret → `007_taxa_resolution`, `008_taxa_intersections_across_samples`**
+* `taxa_resolution()` — Parent-to-Child resolution of the final mosaic.
+* `group_upset()` — cross-sample UpSet within each biological group; separates **core** taxa (in every sample) from **unique**/rare taxa, and writes a Core/Shared/Unique membership table.
 
-> **Group overlays by default.** `taxa_retention()` and `reads_per_taxa()` draw a single figure **per biological group** instead of one set of PDFs per sample: every sample is a faint line and the group mean (± SD) is highlighted, faceted by Domain. Groups are inferred from sample names by stripping trailing digits (e.g. `SAMPLE33`, `SAMPLE34` → group `SAMPLE`). Use `detail_samples=` (`NULL` = group only, `"all"`, or `"SAMPLE33, SAMPLE45"`) to also render per-sample panels into a `per_sample/` subfolder.
+> **Group overlays by default.** `taxa_retention()` and `reads_per_taxa()` draw one figure **per biological group** (each sample a faint line, the group mean ± SD highlighted) instead of a flood of per-sample PDFs. Add `detail_samples=` to also export per-sample panels.
 
 ## 📖 Quick Example
 
+Every call below shows its full set of flags; the commented `#` lines are the defaults — uncomment to customize.
+
 ```r
 library(karioCaS)
-
 proj_dir <- "path/to/your_project"
 
-# 1. Harmonize Data
+# 1. Harmonize the multi-stringency reports into a TSE
 import_karioCaS(project_dir = proj_dir)
 
-# 2. Visual Exploration + Objective Thresholding
-
-    # Taxa retention overlay + optimal CS (Stability Index) per group — one
-    # figure + the SI_Audit tables. Default method = Kneedle elbow.
-      taxa_retention(project_dir = proj_dir)
-
-    # ...drill into specific samples (detailed PDFs in per_sample/)
-      taxa_retention(project_dir = proj_dir, detail_samples = "SAMPLE33, SAMPLE45")
-
-    # Evaluate the taxa "persistance" over increasing Confidence Scores 
-      upset_kariocas(project_dir = proj_dir)
-
-    # Evaluate NGS Read Retention (group overlay; detail_samples = "all" for every sample)
-      reads_per_taxa(project_dir = proj_dir)
-
-    # Parent-to-Child taxa resolution at a chosen Confidence Score
-      taxa_resolution(project_dir = proj_dir, CS = 40)
-
-    # Evaluate taxa extinction patterns
-      heatmaps_karioCaS(project_dir = proj_dir)
-
-# 3. Retrieve the Final Biological Mosaic
-# Both CS_* and reads_min_* accept "auto"/"secondary" (pulled from the SI and
-# Reads audits) or a manual value. Here: fully data-driven for Bacteria/Archaea,
-# manual overrides for Eukaryota/Viruses.
-retrieve_selected_taxa(
-  project_dir = proj_dir, 
-  tax_level = "Species",
-  CS_B = "auto", reads_min_B = "auto",
-  CS_A = "auto", reads_min_A = "auto",
-  CS_E = 40,     reads_min_E = 10,
-  CS_V = 0,      reads_min_V = 0
+# 2. Optimal Confidence Score per domain (+ retention overlay)
+taxa_retention(
+  project_dir = proj_dir
+  # tax_level      = "Species",   # rank used for the optimal-CS curve
+  # method         = "kneedle",   # "kneedle" | "postcliff" | "segmented" | "dynamic" | "manual"
+  # manual_toll    = 1.0,         # acceptable step-loss %, only for method = "manual"
+  # detail_samples = NULL         # NULL = group only | "all" | "SAMPLE01, SAMPLE02"
 )
 
-# 4. Inspect Parent-to-Child resolution of the FINAL mosaic (default source)
-#    (the mosaic always keeps all ranks, so resolution works out of the box)
-taxa_resolution(project_dir = proj_dir)
+# 3. Optimal minimum reads per domain (+ saturation overlay)
+reads_per_taxa(
+  project_dir = proj_dir
+  # analysis_level = "Species",
+  # method         = "kneedle",   # "kneedle" | "postcliff" | "segmented"
+  # detail_samples = NULL
+)
 
-# 5. Core vs unique taxa across samples within each biological group
-group_upset(project_dir = proj_dir)
+# 4. Build the final biological mosaic.
+#    CS_* and reads_min_* each take "auto" | "secondary" | a number.
+retrieve_selected_taxa(
+  project_dir = proj_dir,
+  CS_B = "auto", reads_min_B = "auto",   # Bacteria  : fully data-driven
+  CS_A = "auto", reads_min_A = "auto",   # Archaea   : fully data-driven
+  CS_E = 40,     reads_min_E = 10,       # Eukaryota : manual overrides
+  CS_V = 0,      reads_min_V = 0         # Viruses   : keep everything
+  # tax_level = NULL                     # which rank's audit "auto" reads (NULL = Species)
+)
+
+# --- Descriptive diagnostics (optional, run any time after step 1) ---
+upset_kariocas(project_dir = proj_dir)          # tax_level = "Species"
+heatmaps_karioCaS(project_dir = proj_dir)        # analysis_rank = "Genus", confidence_score = NULL, top_n = 20
+
+# --- Biological insight from the final mosaic ---
+taxa_resolution(
+  project_dir = proj_dir
+  # parent_level = "Genus", child_level = "Species",
+  # CS           = NULL,    # NULL = final mosaic | a number = a single CS
+  # top_n        = 10
+)
+
+group_upset(
+  project_dir = proj_dir
+  # tax_level = "Species",
+  # CS        = NULL        # NULL = final mosaic | a number = a single CS
+)
 ```

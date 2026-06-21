@@ -1,3 +1,13 @@
+# karioCaS 0.99.15
+
+## Documentation
+
+* Rewrote the README for clarity and appeal: a stronger "why karioCaS" value
+  proposition that highlights **both** data-driven thresholds (optimal CS and
+  optimal minimum reads), a corrected folder-architecture example, and a Quick
+  Example that lists every function's full set of flags (defaults shown as
+  commented lines).
+
 # karioCaS 0.99.14
 
 ## Changes
