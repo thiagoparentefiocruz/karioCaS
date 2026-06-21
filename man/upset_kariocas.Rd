@@ -2,7 +2,7 @@
 % Please edit documentation in R/kariocas_002_upset_plot.R
 \name{upset_kariocas}
 \alias{upset_kariocas}
-\title{Generate UpSet Plots per Sample and Domain (Step 002)}
+\title{Generate UpSet Plots per Sample and Domain (Step 005)}
 \usage{
 upset_kariocas(project_dir, tax_level = "Species")
 }
@@ -13,7 +13,7 @@ upset_kariocas(project_dir, tax_level = "Species")
 }
 \value{
 Invisibly returns \code{NULL}. PDF plots are saved to
-  \code{<project_dir>/002_UpSetComparison_Plots/}.
+  \code{<project_dir>/005_taxa_intersections_across_CS/}.
 }
 \description{
 "karioCaS never are upset!" Generates UpSet plots showing taxon persistence

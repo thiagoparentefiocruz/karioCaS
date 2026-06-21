@@ -4,14 +4,14 @@
 
 #' @noRd
 .tr_setup <- function(project_dir) {
-    output_dir <- file.path(project_dir, "001_taxa_retention")
+    output_dir <- file.path(project_dir, "002_taxa_retention")
     log_dir <- file.path(project_dir, "logs")
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_001_cs_retention.txt")
+    log_file <- file.path(log_dir, "log_002_taxa_retention.txt")
     writeLines(c(
         "====================================================",
-        "LOG: 001_CS_RETENTION_ANALYSIS",
+        "LOG: 002_TAXA_RETENTION",
         paste0("PROJECT DIR: ", project_dir),
         "===================================================="
     ), con = log_file)
@@ -351,7 +351,7 @@
 # EXPORTED FUNCTION
 # ==============================================================================
 
-#' Run Confidence Score Retention & Optimization (Step 001)
+#' Run Confidence Score Retention & Optimization (Step 002)
 #'
 #' Executes taxa retention analysis based on Confidence Score (Kraken/Bracken)
 #' and, in the same step, computes the objective optimal CS (Stability Index, SI)
@@ -386,7 +386,7 @@
 #'
 #' @return Invisibly returns a \code{data.frame} with the full SI audit trail.
 #'   PDF plots and \code{SI_Audit_<rank>} files are saved to
-#'   \code{<project_dir>/001_taxa_retention/}.
+#'   \code{<project_dir>/002_taxa_retention/}.
 #' @export
 #' @importFrom dplyr filter select group_by summarise mutate left_join arrange
 #'   rename bind_rows pull distinct n_distinct case_when all_of lag

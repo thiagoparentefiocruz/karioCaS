@@ -2,7 +2,7 @@
 % Please edit documentation in R/kariocas_004_taxa_resolution.R
 \name{taxa_resolution}
 \alias{taxa_resolution}
-\title{Generate Taxa Resolution Analysis (Step 004)}
+\title{Generate Taxa Resolution Analysis (Step 007)}
 \usage{
 taxa_resolution(
   project_dir,
@@ -28,7 +28,7 @@ at that single CS instead of every CS.}
 }
 \value{
 Invisibly returns \code{NULL}. PDF plots are saved to
-  \code{<project_dir>/004_taxa_resolution/}.
+  \code{<project_dir>/007_taxa_resolution/}.
 }
 \description{
 Creates stacked bar plots showing resolution efficiency between a Parent Rank
@@ -38,7 +38,7 @@ parent aggregation to prevent double-counting of children in cumulative data.
 }
 \details{
 By default the analysis runs on the \strong{final mosaic} produced by
-\code{\link{retrieve_selected_taxa}} (\code{1000_final_selection/}), i.e. the
+\code{\link{retrieve_selected_taxa}} (\code{004_final_mosaic/}), i.e. the
 data-driven high-confidence selection - one figure per sample. Alternatively,
 set \code{CS} to analyse the raw imported data at a single Confidence Score.
 }

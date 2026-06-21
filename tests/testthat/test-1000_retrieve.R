@@ -36,7 +36,7 @@ test_that("retrieve_selected_taxa applies UX logic correctly", {
     )
 
     # 5. Auditoria do Output Final
-    out_dir <- file.path(temp_proj_dir, "1000_final_selection")
+    out_dir <- file.path(temp_proj_dir, "004_final_mosaic")
 
     # A. Os arquivos finais foram gerados?
     expect_true(file.exists(file.path(out_dir, "SAMPLE01_karioCaS_Mosaic.mpa")))
@@ -88,7 +88,7 @@ test_that("retrieve_selected_taxa pulls optimal min-reads from Reads_Audit", {
         ),
         "SUCCESS: Process completed."
     )
-    out_dir <- file.path(temp_proj_dir, "1000_final_selection")
+    out_dir <- file.path(temp_proj_dir, "004_final_mosaic")
     expect_true(file.exists(file.path(out_dir, "SAMPLE01_karioCaS_Mosaic.mpa")))
 
     unlink(temp_proj_dir, recursive = TRUE)

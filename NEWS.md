@@ -1,3 +1,18 @@
+# karioCaS 0.99.13
+
+## Changes
+
+* **Output directories reorganized and renamed** to follow the analysis logic
+  (harmonize -> quantify the optima -> decide -> describe -> interpret), with a
+  consistent naming style:
+  `001_imported_matrix`, `002_taxa_retention`, `003_reads_saturation`,
+  `004_final_mosaic`, `005_taxa_intersections_across_CS`,
+  `006_relative_abundance_across_CS`, `007_taxa_resolution`,
+  `008_taxa_intersections_across_samples`. The user input folder
+  `000_mpa_original` is unchanged. Functions resolve cross-references (TSE,
+  audits, mosaic) in the new locations with backward-compatible fallbacks to the
+  previous folder names, so existing projects keep working.
+
 # karioCaS 0.99.12
 
 ## New Features
@@ -9,7 +24,7 @@
   samples of a group from **unique**/rare taxa present in one or a few samples -
   the expected pattern for pathogens and false positives. Default source is the
   final mosaic from `retrieve_selected_taxa()`; pass `CS=` to compare at a single
-  Confidence Score. Output: `<project_dir>/006_group_upset/`.
+  Confidence Score. Output: `<project_dir>/008_taxa_intersections_across_samples/`.
 
 # karioCaS 0.99.11
 
@@ -57,7 +72,7 @@
 
 * **`taxa_resolution()` no longer draws a plot for every Confidence Score.** It
   gains a `CS` argument: by default (`CS = NULL`) it analyses the **final mosaic**
-  from `retrieve_selected_taxa()` (`1000_final_selection/`) - one figure per
+  from `retrieve_selected_taxa()` (`004_final_mosaic/`) - one figure per
   sample - importing and parsing the mosaic `.tsv` directly. Passing a numeric
   `CS` (fraction or percent) analyses the imported data at that single score
   instead of looping over all of them. Output filenames now end in
@@ -102,7 +117,7 @@
   optimal CS on its overlay, writes the `SI_Audit_<rank>.tsv`/`.rds` tables, and
   returns the audit data frame invisibly. It gains `method=` (default
   `"kneedle"`) and `manual_toll=` arguments.
-* The SI audit now lives in `001_taxa_retention/`. `retrieve_selected_taxa()`
+* The SI audit now lives in `002_taxa_retention/`. `retrieve_selected_taxa()`
   reads it from there, with a backward-compatible fallback to the old
   `006_optimize_CS/` location for existing projects.
 

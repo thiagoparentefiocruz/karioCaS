@@ -1,3 +1,18 @@
+#' First existing path among candidate sub-paths of a project directory.
+#'
+#' Returns the first \code{file.path(project_dir, cand)} that exists, or the
+#' first candidate (the canonical new location) if none exist. Used to resolve
+#' karioCaS output folders/files while staying backward-compatible with the
+#' folder names used by earlier package versions.
+#' @param project_dir Project root.
+#' @param ... One or more relative paths, canonical (new) first.
+#' @noRd
+.kcs_path <- function(project_dir, ...) {
+    cands <- file.path(project_dir, c(...))
+    hit <- cands[file.exists(cands)]
+    if (length(hit) > 0) hit[1] else cands[1]
+}
+
 #' @noRd
 .gtd_load_tse <- function(input) {
     if (is(input, "TreeSummarizedExperiment") ||
@@ -15,11 +30,15 @@
         }
     }
     if (is.character(input) && dir.exists(input)) {
-        tse_path <- file.path(
-            input, "000_karioCaS_input_matrix", "karioCaS_TSE.rds"
+        tse_path <- .kcs_path(
+            input,
+            file.path("001_imported_matrix", "karioCaS_TSE.rds"),
+            file.path("000_karioCaS_input_matrix", "karioCaS_TSE.rds")
         )
-        rds_path <- file.path(
-            input, "000_karioCaS_input_matrix", "karioCaS_input_matrix.rds"
+        rds_path <- .kcs_path(
+            input,
+            file.path("001_imported_matrix", "karioCaS_input_matrix.rds"),
+            file.path("000_karioCaS_input_matrix", "karioCaS_input_matrix.rds")
         )
         if (file.exists(tse_path)) {
             return(readRDS(tse_path))

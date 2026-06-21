@@ -2,7 +2,7 @@
 % Please edit documentation in R/kariocas_005_heatmaps.R
 \name{heatmaps_karioCaS}
 \alias{heatmaps_karioCaS}
-\title{Generate Heatmaps of Taxa Abundance with Extinction Patterns (Step 005)}
+\title{Generate Heatmaps of Taxa Abundance with Extinction Patterns (Step 006)}
 \usage{
 heatmaps_karioCaS(
   project_dir,
@@ -23,7 +23,7 @@ Defaults to the highest available CS.}
 }
 \value{
 Invisibly returns \code{NULL}. PDF plots are saved to
-  \code{<project_dir>/005_heatmaps/}.
+  \code{<project_dir>/006_relative_abundance_across_CS/}.
 }
 \description{
 Creates Relative Abundance (%) heatmaps focused on survivors at a specific

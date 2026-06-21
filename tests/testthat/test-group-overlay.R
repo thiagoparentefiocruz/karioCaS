@@ -40,7 +40,7 @@ test_that("taxa_retention writes a group overlay by default and detail on reques
     )
     suppressMessages(import_karioCaS(project_dir = temp_proj_dir))
 
-    out_dir <- file.path(temp_proj_dir, "001_taxa_retention")
+    out_dir <- file.path(temp_proj_dir, "002_taxa_retention")
 
     # Default: group overlay only, no per_sample folder
     suppressMessages(taxa_retention(project_dir = temp_proj_dir))

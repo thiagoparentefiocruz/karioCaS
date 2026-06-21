@@ -59,7 +59,7 @@ test_that("reads_per_taxa writes the optimal-reads audit and saturation plots", 
     ))
     expect_true("Primary_SI" %in% audit$SI_Type)
 
-    out_dir <- file.path(temp_proj_dir, "003_cutoffs")
+    out_dir <- file.path(temp_proj_dir, "003_reads_saturation")
     expect_true(file.exists(file.path(out_dir, "Reads_Audit_Species.tsv")))
     expect_true(file.exists(file.path(out_dir, "Reads_Audit_Species.rds")))
     # Saturation only -- no Rare_Taxa outputs anymore.

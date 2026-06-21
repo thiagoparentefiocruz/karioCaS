@@ -4,14 +4,14 @@
 
 #' @noRd
 .rpt_setup <- function(project_dir, analysis_level, method) {
-    output_dir <- file.path(project_dir, "003_cutoffs")
+    output_dir <- file.path(project_dir, "003_reads_saturation")
     log_dir <- file.path(project_dir, "logs")
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_003_cutoff_analysis.txt")
+    log_file <- file.path(log_dir, "log_003_reads_saturation.txt")
     writeLines(c(
         "====================================================",
-        "LOG: 003_CUTOFF_ANALYSIS (Saturation + Optimal Reads)",
+        "LOG: 003_READS_SATURATION (Saturation + Optimal Reads)",
         paste0("PROJECT DIR: ", project_dir),
         paste0("ANALYSIS LEVEL: ", analysis_level),
         paste0("METHOD: ", toupper(method)),
@@ -306,7 +306,7 @@
 #'
 #' The optimal reads is computed \emph{per Confidence Score}, since the
 #' saturation curve changes with CS; read it off at your chosen optimal CS
-#' (Step 001).
+#' (Step 002).
 #'
 #' @param project_dir Path to the project root.
 #' @param analysis_level Taxonomic rank to analyze (default: \code{"Species"}).
@@ -320,7 +320,7 @@
 #'
 #' @return Invisibly returns a \code{data.frame} with the optimal-reads audit.
 #'   PDF plots and \code{Reads_Audit_<rank>} files are saved to
-#'   \code{<project_dir>/003_cutoffs/}.
+#'   \code{<project_dir>/003_reads_saturation/}.
 #' @export
 #' @importFrom dplyr filter mutate group_by summarise bind_rows case_when
 #'   n_distinct

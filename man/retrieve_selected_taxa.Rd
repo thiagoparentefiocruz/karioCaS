@@ -2,7 +2,7 @@
 % Please edit documentation in R/kariocas_1000_reliable_mpa.R
 \name{retrieve_selected_taxa}
 \alias{retrieve_selected_taxa}
-\title{Retrieve Selected Taxa with Domain-Specific Thresholds (Final Mosaic Step)}
+\title{Retrieve Selected Taxa with Domain-Specific Thresholds (Step 004)}
 \usage{
 retrieve_selected_taxa(
   project_dir,
@@ -47,13 +47,13 @@ Default: 0.}
 }
 \value{
 Invisibly returns \code{TRUE}. Mosaic \code{.mpa} and \code{.tsv}
-  files are saved to \code{<project_dir>/1000_final_selection/}.
+  files are saved to \code{<project_dir>/004_final_mosaic/}.
 }
 \description{
 Creates a "biological mosaic" for each sample using the
-\code{karioCaS_TSE.rds} object from Step 000 and, optionally, the optimal
+\code{karioCaS_TSE.rds} object from Step 001 and, optionally, the optimal
 thresholds computed earlier: the optimal Confidence Score (Stability Index
-audit from \code{taxa_retention()}, Step 001) and the optimal minimum reads
+audit from \code{taxa_retention()}, Step 002) and the optimal minimum reads
 (\code{Reads_Audit} from \code{reads_per_taxa()}, Step 003). Both the
 \code{CS_*} and \code{reads_min_*} arguments accept \code{"auto"},
 \code{"secondary"}, or a manual numeric value per domain. The optimal reads is

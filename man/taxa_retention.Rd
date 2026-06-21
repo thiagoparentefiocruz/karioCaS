@@ -2,7 +2,7 @@
 % Please edit documentation in R/kariocas_001_taxa_retention.R
 \name{taxa_retention}
 \alias{taxa_retention}
-\title{Run Confidence Score Retention & Optimization (Step 001)}
+\title{Run Confidence Score Retention & Optimization (Step 002)}
 \usage{
 taxa_retention(
   project_dir,
@@ -33,7 +33,7 @@ Detailed PDFs are saved to a \code{per_sample/} subfolder.}
 \value{
 Invisibly returns a \code{data.frame} with the full SI audit trail.
   PDF plots and \code{SI_Audit_<rank>} files are saved to
-  \code{<project_dir>/001_taxa_retention/}.
+  \code{<project_dir>/002_taxa_retention/}.
 }
 \description{
 Executes taxa retention analysis based on Confidence Score (Kraken/Bracken)

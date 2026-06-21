@@ -4,11 +4,11 @@
 
 #' @noRd
 .rst_setup <- function(project_dir) {
-    output_dir <- file.path(project_dir, "1000_final_selection")
+    output_dir <- file.path(project_dir, "004_final_mosaic")
     log_dir <- file.path(project_dir, "logs")
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_1000_mosaic_retrieval.txt")
+    log_file <- file.path(log_dir, "log_004_final_mosaic.txt")
     log_msg <- function(...) {
         msg <- paste0(...)
         message(msg)
@@ -24,8 +24,10 @@
 .rst_load_tse <- function(project_dir, log_msg) {
     log_msg("====================================================")
     log_msg("STEP 1: Loading karioCaS TSE Object...")
-    tse_path <- file.path(
-        project_dir, "000_karioCaS_input_matrix", "karioCaS_TSE.rds"
+    tse_path <- .kcs_path(
+        project_dir,
+        file.path("001_imported_matrix", "karioCaS_TSE.rds"),
+        file.path("000_karioCaS_input_matrix", "karioCaS_TSE.rds")
     )
     if (!file.exists(tse_path)) {
         log_msg("CRITICAL ERROR: TSE file not found at: ", tse_path)
@@ -76,20 +78,20 @@
     log_msg("STEP 1.5: Loading SI Audit Data...")
     audit_tax <- if (is.null(tax_level)) "Species" else tax_level
     audit_name <- paste0("SI_Audit_", audit_tax, ".rds")
-    audit_file <- file.path(project_dir, "001_taxa_retention", audit_name)
+    # Canonical 002_taxa_retention/, with fallbacks to earlier folder names.
+    audit_file <- .kcs_path(
+        project_dir,
+        file.path("002_taxa_retention", audit_name),
+        file.path("001_taxa_retention", audit_name),
+        file.path("006_optimize_CS", audit_name)
+    )
     if (!file.exists(audit_file)) {
-        # Backward compatibility: audit used to live in 006_optimize_CS/.
-        legacy_file <- file.path(project_dir, "006_optimize_CS", audit_name)
-        if (file.exists(legacy_file)) {
-            audit_file <- legacy_file
-        } else {
-            log_msg("  [WARNING] Audit file not found: ", audit_file)
-            log_msg(
-                "  Ensure you ran taxa_retention() (Step 001).",
-                " Fallback to CS = 0."
-            )
-            return(NULL)
-        }
+        log_msg("  [WARNING] Audit file not found: ", audit_file)
+        log_msg(
+            "  Ensure you ran taxa_retention() (Step 002).",
+            " Fallback to CS = 0."
+        )
+        return(NULL)
     }
     audit_df <- readRDS(audit_file)
     log_msg("  -> SI Audit loaded successfully for level: ", audit_tax)
@@ -187,8 +189,11 @@
     }
     log_msg("STEP 1.6: Loading Reads Audit Data...")
     audit_tax <- if (is.null(tax_level)) "Species" else tax_level
-    f <- file.path(
-        project_dir, "003_cutoffs", paste0("Reads_Audit_", audit_tax, ".rds")
+    reads_name <- paste0("Reads_Audit_", audit_tax, ".rds")
+    f <- .kcs_path(
+        project_dir,
+        file.path("003_reads_saturation", reads_name),
+        file.path("003_cutoffs", reads_name)
     )
     if (!file.exists(f)) {
         log_msg("  [WARNING] Reads audit not found: ", f)
@@ -285,12 +290,12 @@
 # EXPORTED FUNCTION
 # ==============================================================================
 
-#' Retrieve Selected Taxa with Domain-Specific Thresholds (Final Mosaic Step)
+#' Retrieve Selected Taxa with Domain-Specific Thresholds (Step 004)
 #'
 #' Creates a "biological mosaic" for each sample using the
-#' \code{karioCaS_TSE.rds} object from Step 000 and, optionally, the optimal
+#' \code{karioCaS_TSE.rds} object from Step 001 and, optionally, the optimal
 #' thresholds computed earlier: the optimal Confidence Score (Stability Index
-#' audit from \code{taxa_retention()}, Step 001) and the optimal minimum reads
+#' audit from \code{taxa_retention()}, Step 002) and the optimal minimum reads
 #' (\code{Reads_Audit} from \code{reads_per_taxa()}, Step 003). Both the
 #' \code{CS_*} and \code{reads_min_*} arguments accept \code{"auto"},
 #' \code{"secondary"}, or a manual numeric value per domain. The optimal reads is
@@ -318,7 +323,7 @@
 #' @param reads_min_V Minimum reads for Viruses. Default: 0.
 #'
 #' @return Invisibly returns \code{TRUE}. Mosaic \code{.mpa} and \code{.tsv}
-#'   files are saved to \code{<project_dir>/1000_final_selection/}.
+#'   files are saved to \code{<project_dir>/004_final_mosaic/}.
 #' @export
 #' @importFrom readr read_rds write_tsv write_delim
 #' @importFrom dplyr filter mutate select group_by summarise bind_rows
@@ -380,7 +385,7 @@ retrieve_selected_taxa <- function(project_dir,
             write(paste0("\nCRITICAL ERROR: ", e$message),
                 file = file.path(
                     project_dir, "logs",
-                    "log_1000_mosaic_retrieval.txt"
+                    "log_004_final_mosaic.txt"
                 ),
                 append = TRUE
             )

@@ -25,7 +25,7 @@ test_that("upset_kariocas draws one rank per sample/domain and validates rank", 
         "SUCCESS: UpSet analysis completed."
     )
     samp_dir <- file.path(
-        temp_proj_dir, "002_UpSetComparison_Plots", "SAMPLE01"
+        temp_proj_dir, "005_taxa_intersections_across_CS", "SAMPLE01"
     )
     pdfs <- list.files(samp_dir, pattern = "\\.pdf$")
     expect_true(length(pdfs) > 0)

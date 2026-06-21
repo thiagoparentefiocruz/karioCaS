@@ -4,3 +4,5 @@
 ^NEWS\.Rmd$
 ^dev$
 ^karioCaS\.BiocCheck$
+^\.claude$
+^\.claude/

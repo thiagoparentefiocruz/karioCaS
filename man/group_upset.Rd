@@ -2,7 +2,7 @@
 % Please edit documentation in R/kariocas_006_group_upset.R
 \name{group_upset}
 \alias{group_upset}
-\title{Cross-Sample UpSet: Core vs Unique Taxa per Biological Group (Step 006)}
+\title{Cross-Sample UpSet: Core vs Unique Taxa per Biological Group (Step 008)}
 \usage{
 group_upset(project_dir, tax_level = "Species", CS = NULL)
 }
@@ -18,7 +18,7 @@ mosaic; a numeric value (Kraken fraction \code{0-1} or percentage
 \value{
 Invisibly returns a \code{data.frame} with the full membership table.
   UpSet PDFs and membership TSVs are saved per group to
-  \code{<project_dir>/006_group_upset/}.
+  \code{<project_dir>/008_taxa_intersections_across_samples/}.
 }
 \description{
 For each biological group (inferred from sample names by stripping trailing

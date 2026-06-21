@@ -53,25 +53,27 @@ YOUR_PROJECT_DIR/
 
 The package follows a logical, step-by-step workflow for metagenomic validation, automatically organizing outputs into dynamically generated subfolders:
 
-**1. Data Harmonization (Step 000)**
-* `import_karioCaS()`: Standardizes raw outputs from multiple stringencies into a cohesive Bioconductor `TreeSummarizedExperiment` (TSE) object.
+Outputs are organized into numbered subfolders that follow the analysis logic: **harmonize → quantify the optima → decide → describe → interpret**.
 
-**2. Visual Exploration & Objective Thresholding (Steps 001 - 005)**
-* `taxa_retention()`: Quantifies the percentage of taxa retained as stringency increases **and** computes the objective optimal CS (Stability Index) per domain in the same step. Its group plot marks each domain's median optimal CS with a dashed line, and it writes the `SI_Audit_<rank>` tables consumed by Step 1000. Strategies (`method=`):
-  * **Kneedle (default):** Parameter-free elbow detection — finds the inflection between the steep noise-removal phase and the stable signal floor, consistently across domains.
-  * **Post-cliff:** A more conservative threshold deeper in the plateau (first stable CS after the steepest drop).
-  * **Segmented:** Broken-stick regression for regime shifts (ideal for ecology/dark matter).
-  * **Dynamic / Manual:** First CS within tail noise / expert-defined loss tolls.
-* `taxa_resolution()`: Evaluates taxonomic depth (Parent-to-Child resolution). By default it analyzes the **final mosaic** (`retrieve_selected_taxa()` output) — one figure per sample; pass `CS=` to instead analyze the imported data at a single Confidence Score.
-* `group_upset()`: Cross-sample UpSet **within each biological group** (inferred from name prefixes) — separates **core** taxa (in every sample) from **unique**/rare taxa (in one or a few samples), the expected pattern for pathogens and false positives. Writes a membership TSV (presence matrix + Core/Shared/Unique category). Default source is the final mosaic; `CS=` compares at a single Confidence Score.
-* `reads_per_taxa()`: Saturation analysis on a log read axis. Computes the **optimal minimum reads** per domain (the saturation-curve elbow, via the same engine as the optimal CS), marks each domain's median on the group plot, and writes `Reads_Audit_<rank>` tables — a quantitative threshold for excluding low-abundance background/false-positive taxa.
-* `upset_kariocas()`: Identifies "transient" vs. "persistent" taxa.
-* `heatmaps_karioCaS()`: Detailed abundance heatmaps showing taxa extinction patterns.
+**1. Harmonization → `001_imported_matrix`**
+* `import_karioCaS()`: Standardizes raw outputs from multiple stringencies into a cohesive Bioconductor `TreeSummarizedExperiment` (TSE) — the dataset every other function reads.
 
-> **Group overlays by default.** `taxa_retention()` and `reads_per_taxa()` draw a single figure **per biological group** instead of one set of PDFs per sample: every sample is a faint line and the group mean (± SD) is highlighted, faceted by Domain. Groups are inferred from sample names by stripping trailing digits (e.g. `SAMPLE33`, `SAMPLE34` → group `SAMPLE`; `CONTROL01`, `TREATED01` → `CONTROL`, `TREATED`). Use `detail_samples=` to also render detailed per-sample panels into a `per_sample/` subfolder: `NULL` (default) = group only, `"all"` = every sample, or a comma-separated list such as `"SAMPLE33, SAMPLE45"`.
+**2. Analytical — objective thresholds → `002_taxa_retention`, `003_reads_saturation`**
+* `taxa_retention()`: Quantifies taxa retained as stringency increases **and** computes the optimal CS (Stability Index) per domain; marks each domain's median optimal CS on the group plot and writes the `SI_Audit_<rank>` tables. Strategies (`method=`): **Kneedle** (default, parameter-free elbow), **Post-cliff** (conservative), **Segmented** (broken-stick), **Dynamic / Manual**.
+* `reads_per_taxa()`: Saturation analysis on a log read axis; computes the **optimal minimum reads** per domain (saturation-curve elbow, same engine as the optimal CS), marks each domain's median, and writes `Reads_Audit_<rank>` tables — a quantitative threshold for excluding low-abundance background/false-positive taxa.
 
-**3. The Ultimate Biological Mosaic (Step 1000)**
-* `retrieve_selected_taxa()`: Extracts surviving taxa per domain using **both** data-driven thresholds — the optimal CS (`SI_Audit` from `taxa_retention()`) and the optimal minimum reads (`Reads_Audit` from `reads_per_taxa()`), looked up at the resolved CS. `CS_*` and `reads_min_*` each accept `"auto"`, `"secondary"`, or a manual value. Generates a highly refined, high-confidence `.mpa` file, scrubbed of statistical noise and ready for downstream analysis.
+**3. Decision — the biological mosaic → `004_final_mosaic`**
+* `retrieve_selected_taxa()`: Extracts surviving taxa per domain using **both** data-driven thresholds — optimal CS (`SI_Audit`) and optimal minimum reads (`Reads_Audit`), looked up at the resolved CS. `CS_*` and `reads_min_*` each accept `"auto"`, `"secondary"`, or a manual value. Always keeps **all** taxonomic ranks. Generates a high-confidence `.mpa`, scrubbed of statistical noise.
+
+**4. Descriptive diagnostics → `005_taxa_intersections_across_CS`, `006_relative_abundance_across_CS`**
+* `upset_kariocas()`: UpSet of taxon persistence **across Confidence Scores** (per sample/domain, chosen `tax_level`).
+* `heatmaps_karioCaS()`: Relative-abundance heatmaps showing taxa extinction patterns across CS.
+
+**5. Biological insight (from the final mosaic) → `007_taxa_resolution`, `008_taxa_intersections_across_samples`**
+* `taxa_resolution()`: Parent-to-Child resolution of the final mosaic (or a single `CS=`).
+* `group_upset()`: Cross-sample UpSet **within each biological group** — separates **core** taxa (in every sample) from **unique**/rare taxa (the pathogen / false-positive pattern); writes a membership TSV (presence matrix + Core/Shared/Unique). Default source is the final mosaic; `CS=` compares at a single Confidence Score.
+
+> **Group overlays by default.** `taxa_retention()` and `reads_per_taxa()` draw a single figure **per biological group** instead of one set of PDFs per sample: every sample is a faint line and the group mean (± SD) is highlighted, faceted by Domain. Groups are inferred from sample names by stripping trailing digits (e.g. `SAMPLE33`, `SAMPLE34` → group `SAMPLE`). Use `detail_samples=` (`NULL` = group only, `"all"`, or `"SAMPLE33, SAMPLE45"`) to also render per-sample panels into a `per_sample/` subfolder.
 
 ## 📖 Quick Example
 

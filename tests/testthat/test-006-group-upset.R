@@ -44,7 +44,7 @@ test_that("group_upset(CS = ...) builds membership with Core/Unique categories",
     expect_true("Core" %in% memb$Category)
     expect_equal(max(memb$N_Samples), 2)
 
-    out_dir <- file.path(proj, "006_group_upset", "SAMPLE")
+    out_dir <- file.path(proj, "008_taxa_intersections_across_samples", "SAMPLE")
     expect_true(any(grepl("_CS40_SampleUpSet\\.pdf$", list.files(out_dir))))
     expect_true(any(grepl("_CS40_membership\\.tsv$", list.files(out_dir))))
 
@@ -63,7 +63,7 @@ test_that("group_upset default reads the final mosaic", {
         group_upset(project_dir = proj),
         "SUCCESS: Group UpSet analysis completed."
     )
-    out_dir <- file.path(proj, "006_group_upset", "SAMPLE")
+    out_dir <- file.path(proj, "008_taxa_intersections_across_samples", "SAMPLE")
     expect_true(any(grepl("Final_Mosaic_SampleUpSet\\.pdf$", list.files(out_dir))))
 
     unlink(proj, recursive = TRUE)

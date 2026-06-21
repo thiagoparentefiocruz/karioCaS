@@ -2,7 +2,7 @@
 % Please edit documentation in R/kariocas_000_import.R
 \name{import_karioCaS}
 \alias{import_karioCaS}
-\title{Import Kraken MPA Reports to TreeSummarizedExperiment (Step 000)}
+\title{Import Kraken MPA Reports to TreeSummarizedExperiment (Step 001)}
 \usage{
 import_karioCaS(project_dir)
 }

@@ -9,14 +9,14 @@
 
 #' @noRd
 .gup_setup <- function(project_dir) {
-    output_dir <- file.path(project_dir, "006_group_upset")
+    output_dir <- file.path(project_dir, "008_taxa_intersections_across_samples")
     log_dir <- file.path(project_dir, "logs")
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_006_group_upset.txt")
+    log_file <- file.path(log_dir, "log_008_taxa_intersections_samples.txt")
     writeLines(c(
         "====================================================",
-        "LOG: 006_GROUP_UPSET (core vs unique taxa across samples)",
+        "LOG: 008_TAXA_INTERSECTIONS_ACROSS_SAMPLES (core vs unique taxa across samples)",
         paste0("PROJECT DIR: ", project_dir),
         "===================================================="
     ), con = log_file)
@@ -43,8 +43,8 @@
         stop("Invalid 'tax_level': ", tax_level)
     }
     if (is.null(CS)) {
-        log_msg(">>> Source: Final Mosaic (1000_final_selection)...")
-        mdir <- file.path(project_dir, "1000_final_selection")
+        log_msg(">>> Source: Final Mosaic (004_final_mosaic)...")
+        mdir <- .kcs_path(project_dir, "004_final_mosaic", "1000_final_selection")
         files <- list.files(
             mdir, pattern = "_karioCaS_Mosaic\\.tsv$", full.names = TRUE
         )
@@ -209,7 +209,7 @@
 # EXPORTED FUNCTION
 # ==============================================================================
 
-#' Cross-Sample UpSet: Core vs Unique Taxa per Biological Group (Step 006)
+#' Cross-Sample UpSet: Core vs Unique Taxa per Biological Group (Step 008)
 #'
 #' For each biological group (inferred from sample names by stripping trailing
 #' digits, e.g. \code{SAMPLE33}, \code{SAMPLE34} -> \code{SAMPLE}), draws an
@@ -232,7 +232,7 @@
 #'
 #' @return Invisibly returns a \code{data.frame} with the full membership table.
 #'   UpSet PDFs and membership TSVs are saved per group to
-#'   \code{<project_dir>/006_group_upset/}.
+#'   \code{<project_dir>/008_taxa_intersections_across_samples/}.
 #' @export
 #' @importFrom dplyr filter mutate distinct bind_rows left_join case_when
 #'   n_distinct

@@ -4,14 +4,14 @@
 
 #' @noRd
 .txr_setup <- function(project_dir, parent_level, child_level) {
-    output_dir <- file.path(project_dir, "004_taxa_resolution")
+    output_dir <- file.path(project_dir, "007_taxa_resolution")
     log_dir <- file.path(project_dir, "logs")
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_004_taxa_resolution.txt")
+    log_file <- file.path(log_dir, "log_007_taxa_resolution.txt")
     writeLines(c(
         "====================================================",
-        "LOG: 004_TAXA_RESOLUTION (Max-Based + Doc Fix)",
+        "LOG: 007_TAXA_RESOLUTION",
         paste0("PROJECT DIR: ", project_dir),
         paste0("ANALYSIS: ", parent_level, " vs ", child_level),
         "===================================================="
@@ -34,8 +34,10 @@
     required_cols <- c(parent_level, child_level)
     if (!all(required_cols %in% colnames(df_long))) {
         log_msg(">>> Enriching data with full taxonomy from TSE...")
-        tse_path <- file.path(
-            project_dir, "000_karioCaS_input_matrix", "karioCaS_TSE.rds"
+        tse_path <- .kcs_path(
+            project_dir,
+            file.path("001_imported_matrix", "karioCaS_TSE.rds"),
+            file.path("000_karioCaS_input_matrix", "karioCaS_TSE.rds")
         )
         if (!file.exists(tse_path)) stop("TSE file missing for enrichment.")
         tse <- readRDS(tse_path)
@@ -61,11 +63,11 @@
         )
 }
 
-#' Load the final mosaic (1000_final_selection) and parse its taxonomy.
+#' Load the final mosaic (004_final_mosaic) and parse its taxonomy.
 #' @noRd
 .txr_load_mosaic <- function(project_dir, parent_level, child_level, log_msg) {
-    log_msg(">>> Loading Final Mosaic (1000_final_selection)...")
-    mdir <- file.path(project_dir, "1000_final_selection")
+    log_msg(">>> Loading Final Mosaic (004_final_mosaic)...")
+    mdir <- .kcs_path(project_dir, "004_final_mosaic", "1000_final_selection")
     files <- list.files(
         mdir,
         pattern = "_karioCaS_Mosaic\\.tsv$", full.names = TRUE
@@ -274,7 +276,7 @@
 # EXPORTED FUNCTION
 # ==============================================================================
 
-#' Generate Taxa Resolution Analysis (Step 004)
+#' Generate Taxa Resolution Analysis (Step 007)
 #'
 #' Creates stacked bar plots showing resolution efficiency between a Parent Rank
 #' and a Child Rank (how much of each parent clade's reads are resolved down to
@@ -282,7 +284,7 @@
 #' parent aggregation to prevent double-counting of children in cumulative data.
 #'
 #' By default the analysis runs on the \strong{final mosaic} produced by
-#' \code{\link{retrieve_selected_taxa}} (\code{1000_final_selection/}), i.e. the
+#' \code{\link{retrieve_selected_taxa}} (\code{004_final_mosaic/}), i.e. the
 #' data-driven high-confidence selection - one figure per sample. Alternatively,
 #' set \code{CS} to analyse the raw imported data at a single Confidence Score.
 #'
@@ -296,7 +298,7 @@
 #' @param top_n Number of top taxa to display per domain (default: 10).
 #'
 #' @return Invisibly returns \code{NULL}. PDF plots are saved to
-#'   \code{<project_dir>/004_taxa_resolution/}.
+#'   \code{<project_dir>/007_taxa_resolution/}.
 #' @export
 #' @importFrom dplyr filter mutate select group_by summarise arrange slice_head
 #'   left_join bind_rows distinct case_when pull rename all_of desc

@@ -41,8 +41,8 @@ test_that("import_karioCaS generates TreeSummarizedExperiment successfully", {
     expect_true(all(c("Sample_ID", "Confidence_Score") %in% colnames(SummarizedExperiment::colData(tse))))
 
     # D. Os arquivos f<U+00ED>sicos foram gerados na pasta tempor<U+00E1>ria?
-    expect_true(file.exists(file.path(temp_proj_dir, "000_karioCaS_input_matrix", "karioCaS_TSE.rds")))
-    expect_true(file.exists(file.path(temp_proj_dir, "000_karioCaS_input_matrix", "karioCaS_matrix_audit.tsv")))
+    expect_true(file.exists(file.path(temp_proj_dir, "001_imported_matrix", "karioCaS_TSE.rds")))
+    expect_true(file.exists(file.path(temp_proj_dir, "001_imported_matrix", "karioCaS_matrix_audit.tsv")))
 
     # 5. Cleanup: Apagar diret<U+00F3>rio tempor<U+00E1>rio
     unlink(temp_proj_dir, recursive = TRUE)

@@ -3,7 +3,7 @@
 # ==============================================================================
 # Computes the optimal Confidence Score per sample/domain from a taxa-retention
 # decay curve, and writes the machine-readable audit consumed by
-# retrieve_selected_taxa(). Used by taxa_retention() (Step 001).
+# retrieve_selected_taxa(). Used by taxa_retention() (Step 002).
 # ==============================================================================
 
 #' @importFrom dplyr filter group_by summarise arrange mutate lag n_distinct

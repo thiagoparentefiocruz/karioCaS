@@ -4,14 +4,14 @@
 
 #' @noRd
 .ups_setup <- function(project_dir) {
-    output_dir <- file.path(project_dir, "002_UpSetComparison_Plots")
+    output_dir <- file.path(project_dir, "005_taxa_intersections_across_CS")
     log_dir <- file.path(project_dir, "logs")
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_002_upsetplots.txt")
+    log_file <- file.path(log_dir, "log_005_taxa_intersections_cs.txt")
     writeLines(c(
         "====================================================",
-        "LOG: 002_UPSET_PLOTS (karioCaS never are upset)",
+        "LOG: 005_TAXA_INTERSECTIONS_ACROSS_CS (karioCaS never are upset)",
         paste0("PROJECT DIR: ", project_dir),
         "===================================================="
     ), con = log_file)
@@ -130,7 +130,7 @@
 # EXPORTED FUNCTION
 # ==============================================================================
 
-#' Generate UpSet Plots per Sample and Domain (Step 002)
+#' Generate UpSet Plots per Sample and Domain (Step 005)
 #'
 #' "karioCaS never are upset!" Generates UpSet plots showing taxon persistence
 #' across Confidence Score levels, for a single taxonomic rank, with detailed
@@ -140,7 +140,7 @@
 #' @param tax_level Taxonomic rank to analyze (default: \code{"Species"}).
 #'
 #' @return Invisibly returns \code{NULL}. PDF plots are saved to
-#'   \code{<project_dir>/002_UpSetComparison_Plots/}.
+#'   \code{<project_dir>/005_taxa_intersections_across_CS/}.
 #' @export
 #' @importFrom dplyr filter mutate select distinct case_when pull
 #' @importFrom tidyr pivot_wider

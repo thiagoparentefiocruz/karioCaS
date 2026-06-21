@@ -5,14 +5,14 @@
 
 #' @noRd
 .hm_setup <- function(project_dir, analysis_rank, confidence_score) {
-    output_dir <- file.path(project_dir, "005_heatmaps")
+    output_dir <- file.path(project_dir, "006_relative_abundance_across_CS")
     log_dir <- file.path(project_dir, "logs")
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_005_heatmaps.txt")
+    log_file <- file.path(log_dir, "log_006_relative_abundance.txt")
     header <- c(
         "====================================================",
-        "LOG: 005_HEATMAP_GENERATION",
+        "LOG: 006_RELATIVE_ABUNDANCE",
         paste0("PROJECT DIR: ", project_dir),
         paste0(
             "RANK: ", analysis_rank, " | TARGET CS: ",
@@ -36,8 +36,10 @@
 .hm_load_and_enrich <- function(project_dir, analysis_rank) {
     df_long <- .get_tidy_data(project_dir)
     if (!analysis_rank %in% colnames(df_long)) {
-        tse_path <- file.path(
-            project_dir, "000_karioCaS_input_matrix", "karioCaS_TSE.rds"
+        tse_path <- .kcs_path(
+            project_dir,
+            file.path("001_imported_matrix", "karioCaS_TSE.rds"),
+            file.path("000_karioCaS_input_matrix", "karioCaS_TSE.rds")
         )
         if (!file.exists(tse_path)) stop("TSE file missing for enrichment.")
         tse <- readRDS(tse_path)
@@ -264,7 +266,7 @@
 # EXPORTED FUNCTION
 # ==============================================================================
 
-#' Generate Heatmaps of Taxa Abundance with Extinction Patterns (Step 005)
+#' Generate Heatmaps of Taxa Abundance with Extinction Patterns (Step 006)
 #'
 #' Creates Relative Abundance (%) heatmaps focused on survivors at a specific
 #' Confidence Score. "Elite" survivors are clustered by similarity, while lost
@@ -278,7 +280,7 @@
 #' @param top_n Number of top survivors to display individually (default: 20).
 #'
 #' @return Invisibly returns \code{NULL}. PDF plots are saved to
-#'   \code{<project_dir>/005_heatmaps/}.
+#'   \code{<project_dir>/006_relative_abundance_across_CS/}.
 #' @export
 #' @importFrom dplyr filter mutate select group_by summarise arrange slice_head
 #'   pull ungroup left_join bind_rows distinct rename all_of desc

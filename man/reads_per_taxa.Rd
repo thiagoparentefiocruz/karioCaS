@@ -28,7 +28,7 @@ Detailed PDFs are saved to a \code{per_sample/} subfolder.}
 \value{
 Invisibly returns a \code{data.frame} with the optimal-reads audit.
   PDF plots and \code{Reads_Audit_<rank>} files are saved to
-  \code{<project_dir>/003_cutoffs/}.
+  \code{<project_dir>/003_reads_saturation/}.
 }
 \description{
 Saturation analysis: progressively raises a per-taxon read-count cutoff and
@@ -43,7 +43,7 @@ threshold for excluding low-abundance background/false-positive taxa.
 \details{
 The optimal reads is computed \emph{per Confidence Score}, since the
 saturation curve changes with CS; read it off at your chosen optimal CS
-(Step 001).
+(Step 002).
 }
 \examples{
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")

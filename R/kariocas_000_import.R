@@ -6,15 +6,15 @@
 .imp_setup <- function(project_dir) {
     if (!dir.exists(project_dir)) stop("Project directory not found: ", project_dir)
     input_dir <- file.path(project_dir, "000_mpa_original")
-    output_dir <- file.path(project_dir, "000_karioCaS_input_matrix")
+    output_dir <- file.path(project_dir, "001_imported_matrix")
     log_dir <- file.path(project_dir, "logs")
     if (!dir.exists(input_dir)) stop("Input folder missing: ", input_dir)
     if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
     if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_000_data_import.txt")
+    log_file <- file.path(log_dir, "log_001_import.txt")
     writeLines(c(
         "====================================================",
-        "LOG: 000_DATA_IMPORT (Structured)",
+        "LOG: 001_IMPORT",
         paste0("PROJECT DIR: ", project_dir),
         "===================================================="
     ), con = log_file)
@@ -188,7 +188,7 @@
 # EXPORTED FUNCTION
 # ==============================================================================
 
-#' Import Kraken MPA Reports to TreeSummarizedExperiment (Step 000)
+#' Import Kraken MPA Reports to TreeSummarizedExperiment (Step 001)
 #'
 #' Reads Kraken2 MPA-style reports from the \code{000_mpa_original} folder.
 #' Parses filenames like \code{SAMPLE_CSXX.mpa} (e.g., \code{PILO_CS09.mpa}).

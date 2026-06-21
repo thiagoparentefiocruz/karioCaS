@@ -24,7 +24,7 @@
 
 test_that("taxa_resolution(CS = ...) analyses a single Confidence Score", {
     proj <- .kcs_setup_resolution_proj()
-    out_dir <- file.path(proj, "004_taxa_resolution")
+    out_dir <- file.path(proj, "007_taxa_resolution")
 
     expect_message(
         taxa_resolution(project_dir = proj, CS = 40),
@@ -56,7 +56,7 @@ test_that("taxa_resolution default reads the final mosaic", {
         "SUCCESS: Resolution analysis completed."
     )
     pdfs <- list.files(
-        file.path(proj, "004_taxa_resolution"),
+        file.path(proj, "007_taxa_resolution"),
         pattern = "\\.pdf$"
     )
     expect_true(any(grepl("Final_Mosaic\\.pdf$", pdfs)))
