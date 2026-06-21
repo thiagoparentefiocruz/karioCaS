@@ -1,3 +1,13 @@
+# karioCaS 0.99.10
+
+## Changes
+
+* `upset_kariocas()` now takes a single `tax_level` argument (default
+  `"Species"`), consistent with the other functions' rank flags, and draws one
+  UpSet plot per sample and domain at that rank. Previously it produced a fixed
+  set of three ranks (Species/Genus/Family) per sample/domain; the new behaviour
+  reduces output clutter and lets you pick any rank.
+
 # karioCaS 0.99.9
 
 ## Changes

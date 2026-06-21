@@ -2,12 +2,14 @@
 % Please edit documentation in R/kariocas_002_upset_plot.R
 \name{upset_kariocas}
 \alias{upset_kariocas}
-\title{Generate UpSet Plots per Sample/Domain/Level (Step 002)}
+\title{Generate UpSet Plots per Sample and Domain (Step 002)}
 \usage{
-upset_kariocas(project_dir)
+upset_kariocas(project_dir, tax_level = "Species")
 }
 \arguments{
 \item{project_dir}{Path to the project root.}
+
+\item{tax_level}{Taxonomic rank to analyze (default: \code{"Species"}).}
 }
 \value{
 Invisibly returns \code{NULL}. PDF plots are saved to
@@ -15,10 +17,12 @@ Invisibly returns \code{NULL}. PDF plots are saved to
 }
 \description{
 "karioCaS never are upset!" Generates UpSet plots showing taxon persistence
-across Confidence Score levels, with detailed logging.
+across Confidence Score levels, for a single taxonomic rank, with detailed
+logging. One plot per sample and domain is written to a per-sample subfolder.
 }
 \examples{
 toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 
 # upset_kariocas(project_dir = toy_project)
+# upset_kariocas(project_dir = toy_project, tax_level = "Genus")
 }

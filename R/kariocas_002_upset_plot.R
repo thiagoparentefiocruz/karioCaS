@@ -99,32 +99,30 @@
 }
 
 #' @noRd
-.ups_process_sample <- function(df_long, samp, DOMAINS, LEVELS,
+.ups_process_sample <- function(df_long, samp, DOMAINS, lvl,
                                 output_dir, log_msg) {
     log_msg("------------------------------------------------")
     log_msg("  Processing Sample: ", samp)
     samp_dir <- file.path(output_dir, samp)
     if (!dir.exists(samp_dir)) dir.create(samp_dir)
     for (dom in DOMAINS) {
-        for (lvl in LEVELS) {
-            mat <- .ups_binary_matrix(df_long, samp, dom, lvl)
-            if (is.null(mat)) {
-                log_msg("    Skipping ", dom, "-", lvl, ": No data found.")
-                next
-            }
-            upset_cols <- setdiff(colnames(mat), "Taxon_Name")
-            if (length(upset_cols) < 2) {
-                log_msg(
-                    "    Skipping ", dom, "-", lvl,
-                    ": Not enough intersection levels (Found: ",
-                    length(upset_cols), ")"
-                )
-                next
-            }
-            fname <- paste0(samp, "_", dom, "_", lvl, "_UpSet.pdf")
-            full_path <- file.path(samp_dir, fname)
-            .ups_plot_one(mat, upset_cols, samp, dom, lvl, full_path, log_msg)
+        mat <- .ups_binary_matrix(df_long, samp, dom, lvl)
+        if (is.null(mat)) {
+            log_msg("    Skipping ", dom, "-", lvl, ": No data found.")
+            next
         }
+        upset_cols <- setdiff(colnames(mat), "Taxon_Name")
+        if (length(upset_cols) < 2) {
+            log_msg(
+                "    Skipping ", dom, "-", lvl,
+                ": Not enough intersection levels (Found: ",
+                length(upset_cols), ")"
+            )
+            next
+        }
+        fname <- paste0(samp, "_", dom, "_", lvl, "_UpSet.pdf")
+        full_path <- file.path(samp_dir, fname)
+        .ups_plot_one(mat, upset_cols, samp, dom, lvl, full_path, log_msg)
     }
 }
 
@@ -132,12 +130,14 @@
 # EXPORTED FUNCTION
 # ==============================================================================
 
-#' Generate UpSet Plots per Sample/Domain/Level (Step 002)
+#' Generate UpSet Plots per Sample and Domain (Step 002)
 #'
 #' "karioCaS never are upset!" Generates UpSet plots showing taxon persistence
-#' across Confidence Score levels, with detailed logging.
+#' across Confidence Score levels, for a single taxonomic rank, with detailed
+#' logging. One plot per sample and domain is written to a per-sample subfolder.
 #'
 #' @param project_dir Path to the project root.
+#' @param tax_level Taxonomic rank to analyze (default: \code{"Species"}).
 #'
 #' @return Invisibly returns \code{NULL}. PDF plots are saved to
 #'   \code{<project_dir>/002_UpSetComparison_Plots/}.
@@ -151,20 +151,29 @@
 #' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
 #'
 #' # upset_kariocas(project_dir = toy_project)
-upset_kariocas <- function(project_dir) {
+#' # upset_kariocas(project_dir = toy_project, tax_level = "Genus")
+upset_kariocas <- function(project_dir, tax_level = "Species") {
     if (!requireNamespace("UpSetR", quietly = TRUE)) {
         stop("Package 'UpSetR' is required.")
     }
     setup <- .ups_setup(project_dir)
     setup$log_msg(">>> Loading Data...")
     df_long <- .get_tidy_data(project_dir)
+    if (!tax_level %in% unique(df_long$Rank)) {
+        stop(
+            "Rank '", tax_level, "' not found. Available: ",
+            paste(sort(unique(df_long$Rank)), collapse = ", ")
+        )
+    }
     SAMPLES <- unique(df_long$sample)
     DOMAINS <- names(get_kariocas_colors("domains"))
-    LEVELS <- c("Species", "Genus", "Family")
-    setup$log_msg(">>> Starting UpSet Analysis for ", length(SAMPLES), " samples.")
+    setup$log_msg(
+        ">>> Starting UpSet Analysis (", tax_level, ") for ",
+        length(SAMPLES), " samples."
+    )
     for (samp in SAMPLES) {
         .ups_process_sample(
-            df_long, samp, DOMAINS, LEVELS,
+            df_long, samp, DOMAINS, tax_level,
             setup$output_dir, setup$log_msg
         )
     }
