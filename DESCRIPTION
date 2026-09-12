@@ -37,7 +37,11 @@ Imports:
     forcats,
     tibble,
     methods,
-    rlang
+    rlang,
+    grid,
+    grDevices,
+    stats,
+    utils
 Suggests: 
     knitr,
     rmarkdown,

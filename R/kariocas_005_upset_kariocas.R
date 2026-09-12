@@ -153,9 +153,6 @@
 #' # upset_kariocas(project_dir = toy_project)
 #' # upset_kariocas(project_dir = toy_project, tax_level = "Genus")
 upset_kariocas <- function(project_dir, tax_level = "Species") {
-    if (!requireNamespace("UpSetR", quietly = TRUE)) {
-        stop("Package 'UpSetR' is required.")
-    }
     setup <- .ups_setup(project_dir)
     setup$log_msg(">>> Loading Data...")
     df_long <- .get_tidy_data(project_dir)

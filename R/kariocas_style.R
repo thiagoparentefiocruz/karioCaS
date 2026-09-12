@@ -6,6 +6,8 @@
 #' @importFrom ggplot2 theme_classic theme element_text element_blank element_line element_rect margin unit guide_legend ggplot annotate labs scale_y_continuous scale_x_continuous
 #' @importFrom scales label_number cut_short_scale log_trans
 #' @importFrom ggtext element_markdown
+#' @keywords internal
+#' @noRd
 
 # ==============================================================================
 # 1. CORE VISUAL ASSETS (Hidden from direct user manipulation)

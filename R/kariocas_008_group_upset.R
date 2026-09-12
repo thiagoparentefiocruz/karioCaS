@@ -255,9 +255,6 @@
 #' # Compare at a single Confidence Score instead
 #' # group_upset(project_dir = toy_project, CS = 40)
 group_upset <- function(project_dir, tax_level = "Species", CS = NULL) {
-    if (!requireNamespace("UpSetR", quietly = TRUE)) {
-        stop("Package 'UpSetR' is required.")
-    }
     setup <- .gup_setup(project_dir)
     loaded <- .gup_load(project_dir, tax_level, CS, setup$log_msg)
     df <- loaded$df

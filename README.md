@@ -25,12 +25,25 @@ It then assembles a **biological mosaic**: the taxa that survive each domain's o
 
 ## 🚀 Installation
 
+From Bioconductor (once accepted; requires the current Bioconductor release, R >= 4.5):
+
+```r
+if (!requireNamespace("BiocManager", quietly = TRUE)) {
+    install.packages("BiocManager")
+}
+BiocManager::install("karioCaS")
+```
+
+Development version from GitHub:
+
 ```r
 # install.packages("devtools")
 devtools::install_github("thiagoparentefiocruz/karioCaS")
+```
+
+```r
 library(karioCaS)
 ```
-*(karioCaS is currently under preparation for Bioconductor submission.)*
 
 ## 📁 Folder Architecture
 
