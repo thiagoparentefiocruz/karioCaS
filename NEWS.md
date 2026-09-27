@@ -1,3 +1,62 @@
+# karioCaS 0.99.16
+
+Changes in response to the first Bioconductor review.
+
+## New features
+
+* All analysis functions gain an `export` argument (default `TRUE`). With
+  `export = FALSE` nothing is written to disk and results are only returned.
+* All analysis functions now return a `kariocas_result` object with the
+  computed table (`$data`), the figures (`$plots`, as ggplot/patchwork or
+  UpSetR objects) and the files written (`$paths`), instead of returning
+  `NULL` or a data frame invisibly. A compact `print()` method is provided.
+* `retrieve_selected_taxa()` returns the mosaic in long format with, for each
+  taxon, the CS and minimum reads applied and where each threshold came from.
+
+## Bug fixes
+
+* Reads at ranks above species were double counted in
+  `heatmaps_karioCaS()` (default `analysis_rank = "Genus"`), in
+  `reads_per_taxa()` with `analysis_level` above species, and in the reads
+  curves of the detailed `taxa_retention()` panels: MPA counts are cumulative,
+  and the reads of lower ranks were added again. Each taxon now contributes
+  only its own MPA row. Species-level results are unchanged.
+* `retrieve_selected_taxa()` no longer falls back silently to CS 0 or 0
+  minimum reads when an `"auto"`/`"secondary"` threshold is requested but the
+  audit file is missing: it stops and says which step to run. Per-domain
+  fallbacks are reported in a single warning, and invalid manual values are
+  rejected.
+* `SUCCESS` messages are only shown when results were actually produced;
+  otherwise a warning explains that nothing was generated. UpSet plots that
+  fail to draw are reported instead of leaving an empty folder.
+* Unknown sample names in `detail_samples` are now an error listing the
+  available samples, instead of being silently ignored.
+* `heatmaps_karioCaS()`: `analysis_rank = "Genus"` is now the visible default;
+  the CS used when `confidence_score = NULL` is reported, and a requested CS
+  above a sample's maximum triggers a warning.
+* Removed redundant `requireNamespace("UpSetR")` checks.
+
+## Documentation
+
+* Runnable examples for all exported functions, working on a temporary copy
+  of the example data.
+* Package-level help page (`?karioCaS`), including an acknowledgement of AI
+  assistance; the same statement is in the README and the vignette.
+* Help pages describe how every reported quantity is calculated.
+* Vignette converted to BiocStyle with a table of contents, an installation
+  section, a section on integration with Bioconductor, an exact description
+  of the import step, the thresholding sections before visual exploration,
+  and evaluated examples of the exploration functions.
+* `inst/script/toy_data_provenance.md` documents the example data.
+* `grid`, `grDevices`, `stats` and `utils` declared in `Imports`; internal
+  helpers no longer have user-facing help pages.
+
+## Tests
+
+* New tests for heatmaps (previously untested), for `export = FALSE`, for the
+  new error and warning paths, and regression tests that compare genus-level
+  counts with the MPA rows.
+
 # karioCaS 0.99.15
 
 ## Documentation

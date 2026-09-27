@@ -384,6 +384,40 @@
 #'   \code{\link{retrieve_selected_taxa}} with \code{CS_* = "auto"} reads the
 #'   exported audit file, so run this step with \code{export = TRUE} before it.
 #'
+#' @section How the quantities are calculated:
+#' For each sample and domain, at each CS:
+#' \itemize{
+#'   \item \code{Taxa_Count}: number of distinct taxa at \code{tax_level}
+#'     detected with at least one read.
+#'   \item \code{Pct_Retained}: \code{Taxa_Count} as a percentage of its
+#'     maximum across CS values (normally the value at CS 0).
+#'   \item \code{Step_Loss_Pct}: percentage points of \code{Pct_Retained} lost
+#'     since the previous CS.
+#' }
+#' The optimal CS (Primary SI) is then located on the \code{Pct_Retained}
+#' curve. \code{"kneedle"}: the CS at which the curve lies furthest below the
+#' straight line joining its first and last points (falling back to the
+#' steepest single drop if the curve is not convex). \code{"postcliff"}: the
+#' first CS, at or after the steepest drop, whose \code{Step_Loss_Pct} is at
+#' most a tolerance \eqn{\max(\bar{t} + 1.5 s_t, 0.5)}, where \eqn{\bar{t}} and
+#' \eqn{s_t} are the mean and SD of the step losses at CS \eqn{\ge} 50.
+#' \code{"segmented"}: the breakpoint minimising the total residual sum of
+#' squares of two straight-line fits. \code{"dynamic"}: the first CS above the
+#' lowest one whose step loss is within the same tolerance. \code{"manual"}:
+#' the first CS above the lowest one whose step loss is within
+#' \code{manual_toll} (a single value, or a named list per domain). When no CS
+#' qualifies, the highest CS is used. A Secondary SI, a stricter alternative,
+#' is also reported by \code{"kneedle"} (the post-cliff value, when stricter
+#' than the elbow), \code{"dynamic"} (the next CS whose step loss is at most
+#' \eqn{\max(\bar{t}, 0.1)}) and \code{"manual"} (the next CS whose step loss
+#' is at most 0.2). A domain needs at least three CS values and some loss of
+#' taxa to be assessed.
+#'
+#' In the detailed per-sample panels, curves are expressed relative to CS 0:
+#' taxa at each rank (distinct taxa detected), reads classified to that rank
+#' (the sum of the rank's own MPA rows, which already include the reads
+#' classified to lower ranks) and total reads of the domain (the domain row).
+#'
 #' @return A \code{\link{kariocas_result}} object with \code{$data}, the SI
 #'   audit table (one row per sample, domain and CS, with the retention
 #'   percentages and the Stability Index tags), \code{$plots}, a named list of

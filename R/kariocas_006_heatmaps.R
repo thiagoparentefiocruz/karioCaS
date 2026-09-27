@@ -292,6 +292,19 @@
 #'   \code{<project_dir>/006_relative_abundance_across_CS/}. When \code{FALSE},
 #'   nothing is written and the heatmaps are only returned.
 #'
+#' @section How the quantities are calculated:
+#' For each sample and domain, a taxon's reads at \code{analysis_rank} are
+#' the count of its own MPA row, which already includes the reads classified
+#' to lower ranks. The \code{top_n} taxa with most reads at the target CS are
+#' shown individually. The remaining taxa are aggregated: taxa present at a CS
+#' below the target but absent at the next CS form a row
+#' \emph{"Recovered only in CSxx"}; taxa still present at the target CS but not
+#' among the \code{top_n} form a row \emph{"Lowest abundance ... in CSxx"}.
+#' \code{Rel_Abund} is the reads of a row divided by the total reads of all
+#' taxa of that domain at \code{analysis_rank} at the same CS, times 100.
+#' Individual taxa are ordered by hierarchical clustering (Euclidean distance,
+#' complete linkage) of their relative-abundance profiles across CS.
+#'
 #' @return A \code{\link{kariocas_result}} object. \code{$data} holds the
 #'   plotted values (one row per sample, domain, taxon or loss group and CS,
 #'   with \code{Counts}, \code{Rel_Abund} and the \code{Target_CS} used),

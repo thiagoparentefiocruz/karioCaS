@@ -312,6 +312,20 @@
 #'   reads the exported audit file, so run this step with \code{export = TRUE}
 #'   before it.
 #'
+#' @section How the quantities are calculated:
+#' For each sample, CS and domain, the taxa at \code{analysis_level} are
+#' counted at increasing minimum-read cutoffs (1, 2, 3, 4, 5, 7, 10, then
+#' 1, 2, 3, 5 and 7 \eqn{\times 10^k} up to just past the largest count).
+#' \code{Taxa_Count} is the number of taxa with at least \code{Cutoff} reads,
+#' where a taxon's reads are the count of its own MPA row (which already
+#' includes reads classified to lower ranks). \code{Pct_Retained} is
+#' \code{Taxa_Count} as a percentage of the count at the lowest cutoff, and
+#' \code{Step_Loss_Pct} the loss since the previous cutoff. The optimal
+#' minimum reads (Primary SI) is the elbow of this curve, found with the same
+#' engine as in \code{\link{taxa_retention}} on a \eqn{\log_{10}} read axis;
+#' with \code{"kneedle"}, the more conservative post-cliff cutoff is reported
+#' as Secondary SI when it is larger.
+#'
 #' @return A \code{\link{kariocas_result}} object with \code{$data}, the
 #'   optimal-reads audit table (one row per sample, CS, domain and read cutoff),
 #'   \code{$plots}, a named list of \code{patchwork} figures (one saturation

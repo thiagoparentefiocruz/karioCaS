@@ -298,6 +298,16 @@
 #'   sample and a log are written to \code{<project_dir>/007_taxa_resolution/}.
 #'   When \code{FALSE}, nothing is written and the results are only returned.
 #'
+#' @section How the quantities are calculated:
+#' MPA counts are cumulative, so a parent row (e.g. a genus) already includes
+#' the reads of its children (its species). For the \code{top_n} parent taxa
+#' with most reads in each domain: \code{Parent_Cumulative_Total} is the count
+#' of the parent's own row; \code{Child_Sum_Resolved} is the sum of its
+#' children's rows at \code{child_level}, i.e. the reads resolved down to the
+#' child rank; \code{Parent_Exclusive} is
+#' \code{Parent_Cumulative_Total - Child_Sum_Resolved} (floored at 0), the
+#' reads classified to the parent but not resolved to the child rank.
+#'
 #' @return A \code{\link{kariocas_result}} object. \code{$data} holds, for
 #'   each sample, domain and top parent taxon, the parent's cumulative reads
 #'   (\code{Parent_Cumulative_Total}), the reads resolved to the child rank
