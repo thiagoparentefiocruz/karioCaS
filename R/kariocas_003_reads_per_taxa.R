@@ -3,29 +3,15 @@
 # ==============================================================================
 
 #' @noRd
-.rpt_setup <- function(project_dir, analysis_level, method) {
-    output_dir <- file.path(project_dir, "003_reads_saturation")
-    log_dir <- file.path(project_dir, "logs")
-    if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-    if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_003_reads_saturation.txt")
-    writeLines(c(
-        "====================================================",
-        "LOG: 003_READS_SATURATION (Saturation + Optimal Reads)",
-        paste0("PROJECT DIR: ", project_dir),
-        paste0("ANALYSIS LEVEL: ", analysis_level),
-        paste0("METHOD: ", toupper(method)),
-        "===================================================="
-    ), con = log_file)
-    log_msg <- function(...) {
-        msg <- paste0(...)
-        message(msg)
-        write(
-            paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg),
-            file = log_file, append = TRUE
+.rpt_setup <- function(project_dir, analysis_level, method, export = TRUE) {
+    .kcs_setup_step(
+        project_dir, "003_reads_saturation", "log_003_reads_saturation.txt",
+        export = export,
+        extra_header = c(
+            paste0("ANALYSIS LEVEL: ", analysis_level),
+            paste0("METHOD: ", toupper(method))
         )
-    }
-    list(output_dir = output_dir, log_msg = log_msg)
+    )
 }
 
 #' Adaptive read-count cutoffs for a saturation curve.
@@ -99,7 +85,7 @@
 
 #' @noRd
 .rpt_save_group_overlay <- function(overlay, vlines, grp, cs, n_samples,
-                                    analysis_level, DOMAINS, output_dir, log_msg) {
+                                    analysis_level, DOMAINS, setup) {
     apply_scales <- function(p) {
         p +
             scale_x_kariocas_log10(labels = label_k_number) +
@@ -121,14 +107,17 @@
             "n = ", n_samples, " samples (", analysis_level,
             ") | bold = group mean, dashed = median optimal reads"
         ),
-        fname, output_dir, log_msg
+        fname, setup
     )
 }
 
 #' @noRd
 .rpt_group_analysis <- function(df_proc, CS_LIST, DOMAINS,
-                                analysis_level, method, output_dir, log_msg) {
+                                analysis_level, method, setup) {
+    log_msg <- setup$log_msg
     audit_all <- list()
+    plots <- list()
+    paths <- character(0)
     for (grp in unique(df_proc$Group)) {
         df_grp <- dplyr::filter(df_proc, .data$Group == grp)
         n_samples <- dplyr::n_distinct(df_grp$sample)
@@ -154,13 +143,15 @@
                     )
                 vlines <- stats::setNames(prim$v, prim$Domain)
             }
-            .rpt_save_group_overlay(
+            out <- .rpt_save_group_overlay(
                 overlay, vlines, grp, cs, n_samples,
-                analysis_level, DOMAINS, output_dir, log_msg
+                analysis_level, DOMAINS, setup
             )
+            plots[[paste0(grp, "_CS", sprintf("%02d", cs), "_Saturation")]] <- out$plot
+            paths <- c(paths, out$path)
         }
     }
-    dplyr::bind_rows(audit_all)
+    list(data = dplyr::bind_rows(audit_all), plots = plots, paths = paths)
 }
 
 # ------------------------------------------------------------------------------
@@ -251,10 +242,10 @@
 
 #' @noRd
 .rpt_detail_cs <- function(df_proc, samp, cs, DOMAINS, analysis_level,
-                           output_dir, log_msg) {
+                           setup, dir) {
     df_curr <- dplyr::filter(df_proc, .data$sample == samp, .data$CS == cs)
     if (nrow(df_curr) == 0) {
-        return(invisible(NULL))
+        return(NULL)
     }
     plots <- stats::setNames(
         lapply(DOMAINS, function(dom) {
@@ -282,11 +273,7 @@
         samp, "_CS", sprintf("%02d", cs),
         "_Cutoff_", analysis_level, "_Saturation.pdf"
     )
-    ggplot2::ggsave(
-        file.path(output_dir, fname), layout,
-        width = get_kariocas_dims()$width, height = get_kariocas_dims()$height
-    )
-    log_msg("    -> Saved: ", fname)
+    list(plot = layout, path = .kcs_save_plot(layout, fname, setup, dir = dir))
 }
 
 # ==============================================================================
@@ -317,10 +304,19 @@
 #'   \code{"all"} renders every sample; a comma-separated string such as
 #'   \code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
 #'   Detailed PDFs are saved to a \code{per_sample/} subfolder.
+#' @param export Logical (default \code{TRUE}). When \code{TRUE}, PDF plots,
+#'   the \code{Reads_Audit_<rank>.tsv}/\code{.rds} files and a log are written
+#'   to \code{<project_dir>/003_reads_saturation/}. When \code{FALSE}, nothing
+#'   is written and all results are only returned. Note that
+#'   \code{\link{retrieve_selected_taxa}} with \code{reads_min_* = "auto"}
+#'   reads the exported audit file, so run this step with \code{export = TRUE}
+#'   before it.
 #'
-#' @return Invisibly returns a \code{data.frame} with the optimal-reads audit.
-#'   PDF plots and \code{Reads_Audit_<rank>} files are saved to
-#'   \code{<project_dir>/003_reads_saturation/}.
+#' @return A \code{\link{kariocas_result}} object with \code{$data}, the
+#'   optimal-reads audit table (one row per sample, CS, domain and read cutoff),
+#'   \code{$plots}, a named list of \code{patchwork} figures (one saturation
+#'   overlay per group and CS, plus detailed per-sample panels when requested)
+#'   and \code{$paths}, the files written when \code{export = TRUE}.
 #' @export
 #' @importFrom dplyr filter mutate group_by summarise bind_rows case_when
 #'   n_distinct
@@ -333,16 +329,31 @@
 #' @importFrom stats median setNames
 #' @importFrom ggtext element_markdown
 #' @examples
-#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#' # Copy the bundled toy project to a temporary folder and import it
+#' toy_project <- file.path(tempdir(), "toy_karioCaS")
+#' dir.create(toy_project, showWarnings = FALSE)
+#' file.copy(
+#'     system.file("extdata", "your_project_name", "000_mpa_original",
+#'         package = "karioCaS"
+#'     ),
+#'     toy_project, recursive = TRUE
+#' )
+#' import_karioCaS(toy_project)
 #'
-#' # Group saturation overlays + optimal minimum reads (default Kneedle)
-#' # reads_per_taxa(project_dir = toy_project)
+#' # Saturation overlays + optimal minimum reads (Kneedle), in memory only
+#' res <- reads_per_taxa(toy_project, export = FALSE)
+#' res
+#' head(res$data)
+#' res$plots[[1]]
+#'
+#' unlink(toy_project, recursive = TRUE)
 reads_per_taxa <- function(project_dir,
                            analysis_level = "Species",
                            method = c("kneedle", "postcliff", "segmented"),
-                           detail_samples = NULL) {
+                           detail_samples = NULL,
+                           export = TRUE) {
     method <- match.arg(method)
-    setup <- .rpt_setup(project_dir, analysis_level, method)
+    setup <- .rpt_setup(project_dir, analysis_level, method, export)
     setup$log_msg(">>> Loading Data (Auto-detected format)...")
     df_long <- .get_tidy_data(project_dir)
     df_proc <- dplyr::filter(df_long, .data$Rank == analysis_level)
@@ -358,39 +369,37 @@ reads_per_taxa <- function(project_dir,
     setup$log_msg(
         ">>> Saturation + optimal reads (method: ", method, ")..."
     )
-    full_audit <- .rpt_group_analysis(
-        df_proc, CS_LIST, DOMAINS,
-        analysis_level, method, setup$output_dir, setup$log_msg
+    ga <- .rpt_group_analysis(
+        df_proc, CS_LIST, DOMAINS, analysis_level, method, setup
     )
+    full_audit <- ga$data
+    plots <- ga$plots
+    paths <- ga$paths
     if (!is.null(full_audit) && nrow(full_audit) > 0) {
-        tsv_path <- file.path(
-            setup$output_dir, paste0("Reads_Audit_", analysis_level, ".tsv")
-        )
-        rds_path <- file.path(
-            setup$output_dir, paste0("Reads_Audit_", analysis_level, ".rds")
-        )
-        readr::write_tsv(full_audit, tsv_path)
-        readr::write_rds(full_audit, rds_path)
-        setup$log_msg("SAVED READS AUDIT TSV: ", tsv_path)
-        setup$log_msg("SAVED READS AUDIT RDS: ", rds_path)
+        paths <- c(paths, .kcs_save_table(
+            full_audit, paste0("Reads_Audit_", analysis_level), setup
+        ))
     }
 
-    detail <- .grp_resolve_detail(detail_samples, SAMPLES, setup$log_msg)
+    detail <- .grp_resolve_detail(detail_samples, SAMPLES)
     if (length(detail) > 0) {
-        detail_dir <- file.path(setup$output_dir, "per_sample")
-        if (!dir.exists(detail_dir)) dir.create(detail_dir, recursive = TRUE)
+        detail_dir <- if (export) file.path(setup$output_dir, "per_sample") else NULL
         setup$log_msg(
             ">>> Rendering detailed panels for ", length(detail), " sample(s)."
         )
         for (samp in detail) {
             for (cs in CS_LIST) {
-                .rpt_detail_cs(
-                    df_proc, samp, cs, DOMAINS, analysis_level,
-                    detail_dir, setup$log_msg
+                out <- .rpt_detail_cs(
+                    df_proc, samp, cs, DOMAINS, analysis_level, setup, detail_dir
                 )
+                if (is.null(out)) next
+                plots[[paste0(samp, "_CS", sprintf("%02d", cs), "_Saturation")]] <- out$plot
+                paths <- c(paths, out$path)
             }
         }
     }
-    setup$log_msg("SUCCESS: Cutoff analysis completed.")
-    invisible(full_audit)
+    .kcs_finish_step(
+        "003_reads_saturation", full_audit, plots, paths, setup, setup$log_msg,
+        what = "saturation results"
+    )
 }

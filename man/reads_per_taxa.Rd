@@ -8,7 +8,8 @@ reads_per_taxa(
   project_dir,
   analysis_level = "Species",
   method = c("kneedle", "postcliff", "segmented"),
-  detail_samples = NULL
+  detail_samples = NULL,
+  export = TRUE
 )
 }
 \arguments{
@@ -24,11 +25,21 @@ saturation panels. \code{NULL} (default) writes only the group overlays;
 \code{"all"} renders every sample; a comma-separated string such as
 \code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
 Detailed PDFs are saved to a \code{per_sample/} subfolder.}
+
+\item{export}{Logical (default \code{TRUE}). When \code{TRUE}, PDF plots,
+the \code{Reads_Audit_<rank>.tsv}/\code{.rds} files and a log are written
+to \code{<project_dir>/003_reads_saturation/}. When \code{FALSE}, nothing
+is written and all results are only returned. Note that
+\code{\link{retrieve_selected_taxa}} with \code{reads_min_* = "auto"}
+reads the exported audit file, so run this step with \code{export = TRUE}
+before it.}
 }
 \value{
-Invisibly returns a \code{data.frame} with the optimal-reads audit.
-  PDF plots and \code{Reads_Audit_<rank>} files are saved to
-  \code{<project_dir>/003_reads_saturation/}.
+A \code{\link{kariocas_result}} object with \code{$data}, the
+  optimal-reads audit table (one row per sample, CS, domain and read cutoff),
+  \code{$plots}, a named list of \code{patchwork} figures (one saturation
+  overlay per group and CS, plus detailed per-sample panels when requested)
+  and \code{$paths}, the files written when \code{export = TRUE}.
 }
 \description{
 Saturation analysis: progressively raises a per-taxon read-count cutoff and
@@ -46,8 +57,22 @@ saturation curve changes with CS; read it off at your chosen optimal CS
 (Step 002).
 }
 \examples{
-toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+# Copy the bundled toy project to a temporary folder and import it
+toy_project <- file.path(tempdir(), "toy_karioCaS")
+dir.create(toy_project, showWarnings = FALSE)
+file.copy(
+    system.file("extdata", "your_project_name", "000_mpa_original",
+        package = "karioCaS"
+    ),
+    toy_project, recursive = TRUE
+)
+import_karioCaS(toy_project)
 
-# Group saturation overlays + optimal minimum reads (default Kneedle)
-# reads_per_taxa(project_dir = toy_project)
+# Saturation overlays + optimal minimum reads (Kneedle), in memory only
+res <- reads_per_taxa(toy_project, export = FALSE)
+res
+head(res$data)
+res$plots[[1]]
+
+unlink(toy_project, recursive = TRUE)
 }

@@ -11,14 +11,14 @@ test_that(".grp_parse_group strips trailing digits", {
 
 test_that(".grp_resolve_detail handles NULL, 'all', strings and vectors", {
     r <- karioCaS:::.grp_resolve_detail
-    noop <- function(...) invisible(NULL)
     all_s <- c("SAMPLE33", "SAMPLE45", "SAMPLE50")
-    expect_equal(r(NULL, all_s, noop), character(0))
-    expect_equal(r("all", all_s, noop), all_s)
-    expect_equal(r("SAMPLE33, SAMPLE45", all_s, noop), c("SAMPLE33", "SAMPLE45"))
-    expect_equal(r(c("SAMPLE50"), all_s, noop), "SAMPLE50")
-    # Unknown names are dropped
-    expect_equal(r("SAMPLE33, NOPE", all_s, noop), "SAMPLE33")
+    expect_equal(r(NULL, all_s), character(0))
+    expect_equal(r("all", all_s), all_s)
+    expect_equal(r("SAMPLE33, SAMPLE45", all_s), c("SAMPLE33", "SAMPLE45"))
+    expect_equal(r(c("SAMPLE50"), all_s), "SAMPLE50")
+    # Unknown names are an error that lists the valid samples
+    expect_error(r("SAMPLE33, NOPE", all_s), "NOPE")
+    expect_error(r("NOPE", all_s), "SAMPLE45")
 })
 
 test_that("taxa_retention writes a group overlay by default and detail on request", {

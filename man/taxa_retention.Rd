@@ -9,7 +9,8 @@ taxa_retention(
   tax_level = "Species",
   method = c("kneedle", "postcliff", "segmented", "dynamic", "manual"),
   manual_toll = 1,
-  detail_samples = NULL
+  detail_samples = NULL,
+  export = TRUE
 )
 }
 \arguments{
@@ -29,11 +30,21 @@ panels. \code{NULL} (default) writes only the group overlay; \code{"all"}
 renders every sample; a comma-separated string such as
 \code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
 Detailed PDFs are saved to a \code{per_sample/} subfolder.}
+
+\item{export}{Logical (default \code{TRUE}). When \code{TRUE}, PDF plots,
+the \code{SI_Audit_<rank>.tsv}/\code{.rds} files and a log are written to
+\code{<project_dir>/002_taxa_retention/}. When \code{FALSE}, nothing is
+written to disk and all results are only returned. Note that
+\code{\link{retrieve_selected_taxa}} with \code{CS_* = "auto"} reads the
+exported audit file, so run this step with \code{export = TRUE} before it.}
 }
 \value{
-Invisibly returns a \code{data.frame} with the full SI audit trail.
-  PDF plots and \code{SI_Audit_<rank>} files are saved to
-  \code{<project_dir>/002_taxa_retention/}.
+A \code{\link{kariocas_result}} object with \code{$data}, the SI
+  audit table (one row per sample, domain and CS, with the retention
+  percentages and the Stability Index tags), \code{$plots}, a named list of
+  \code{patchwork} figures (one group overlay per biological group, plus the
+  detailed per-sample panels when requested) and \code{$paths}, the files
+  written when \code{export = TRUE}.
 }
 \description{
 Executes taxa retention analysis based on Confidence Score (Kraken/Bracken)
@@ -56,8 +67,23 @@ conservative threshold past the steepest drop), \code{"segmented"}
 (broken-stick regression), \code{"dynamic"}, or \code{"manual"}.
 }
 \examples{
-toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+# Copy the bundled toy project to a temporary folder and import it
+toy_project <- file.path(tempdir(), "toy_karioCaS")
+dir.create(toy_project, showWarnings = FALSE)
+file.copy(
+    system.file("extdata", "your_project_name", "000_mpa_original",
+        package = "karioCaS"
+    ),
+    toy_project, recursive = TRUE
+)
+import_karioCaS(toy_project)
 
-# Group retention overlay + optimal CS (default Kneedle method)
-# taxa_retention(project_dir = toy_project)
+# Retention curves + optimal CS (Kneedle), results kept in memory only
+res <- taxa_retention(toy_project, export = FALSE)
+res
+head(res$data)
+names(res$plots)
+res$plots[[1]]
+
+unlink(toy_project, recursive = TRUE)
 }

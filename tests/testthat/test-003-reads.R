@@ -48,11 +48,13 @@ test_that("reads_per_taxa writes the optimal-reads audit and saturation plots", 
     suppressMessages(import_karioCaS(project_dir = temp_proj_dir))
 
     expect_message(
-        audit <- reads_per_taxa(
+        res <- reads_per_taxa(
             project_dir = temp_proj_dir, analysis_level = "Species"
         ),
-        "SUCCESS: Cutoff analysis completed."
+        "SUCCESS: 003_reads_saturation completed"
     )
+    expect_s3_class(res, "kariocas_result")
+    audit <- res$data
     expect_s3_class(audit, "data.frame")
     expect_true(all(
         c("Sample", "CS", "Domain", "Cutoff", "SI_Type") %in% colnames(audit)
@@ -66,5 +68,27 @@ test_that("reads_per_taxa writes the optimal-reads audit and saturation plots", 
     expect_false(any(grepl("Rare", list.files(out_dir))))
     expect_true(any(grepl("Saturation\\.pdf$", list.files(out_dir))))
 
+    unlink(temp_proj_dir, recursive = TRUE)
+})
+
+test_that("reads_per_taxa with export = FALSE keeps everything in memory", {
+    temp_proj_dir <- tempfile(pattern = "kariocas_test_reads_noexp_")
+    dir.create(file.path(temp_proj_dir, "000_mpa_original"), recursive = TRUE)
+    mock_data_src <- system.file(
+        "extdata/your_project_name/000_mpa_original",
+        package = "karioCaS"
+    )
+    file.copy(
+        list.files(mock_data_src, full.names = TRUE),
+        file.path(temp_proj_dir, "000_mpa_original")
+    )
+    suppressMessages(import_karioCaS(project_dir = temp_proj_dir))
+
+    res <- suppressMessages(reads_per_taxa(temp_proj_dir, export = FALSE))
+    expect_false(dir.exists(file.path(temp_proj_dir, "003_reads_saturation")))
+    expect_s3_class(res, "kariocas_result")
+    expect_true(nrow(res$data) > 0)
+    expect_true(length(res$plots) > 0)
+    expect_length(res$paths, 0)
     unlink(temp_proj_dir, recursive = TRUE)
 })

@@ -3,27 +3,11 @@
 # ==============================================================================
 
 #' @noRd
-.tr_setup <- function(project_dir) {
-    output_dir <- file.path(project_dir, "002_taxa_retention")
-    log_dir <- file.path(project_dir, "logs")
-    if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-    if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_002_taxa_retention.txt")
-    writeLines(c(
-        "====================================================",
-        "LOG: 002_TAXA_RETENTION",
-        paste0("PROJECT DIR: ", project_dir),
-        "===================================================="
-    ), con = log_file)
-    log_msg <- function(...) {
-        msg <- paste0(...)
-        message(msg)
-        write(
-            paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg),
-            file = log_file, append = TRUE
-        )
-    }
-    list(output_dir = output_dir, log_file = log_file, log_msg = log_msg)
+.tr_setup <- function(project_dir, export = TRUE) {
+    .kcs_setup_step(
+        project_dir, "002_taxa_retention", "log_002_taxa_retention.txt",
+        export = export
+    )
 }
 
 #' @noRd
@@ -152,7 +136,7 @@
 
 #' @noRd
 .tr_save_plot_a <- function(df_calc, baseline_df, DOMAINS, samp,
-                            fmt_num, output_dir, log_msg) {
+                            fmt_num, setup, dir) {
     plots <- stats::setNames(
         lapply(DOMAINS, function(d) {
             .tr_domain_plot_a(df_calc, d, baseline_df, fmt_num)
@@ -171,11 +155,8 @@
         patchwork::plot_layout(guides = "collect") &
         ggplot2::theme(legend.position = "bottom")
     fname <- paste0(samp, "_CS_Retention_All_Levels.pdf")
-    ggplot2::ggsave(
-        file.path(output_dir, fname), layout,
-        width = get_kariocas_dims()$width, height = get_kariocas_dims()$height
-    )
-    log_msg("    -> Generated: ", fname)
+    path <- .kcs_save_plot(layout, fname, setup, dir = dir)
+    list(plots = stats::setNames(list(layout), "All_Levels"), paths = path)
 }
 
 #' @noRd
@@ -250,11 +231,13 @@
 }
 
 #' @noRd
-.tr_save_plots_b <- function(df_calc, DOMAINS, samp, fmt_num, output_dir, log_msg) {
+.tr_save_plots_b <- function(df_calc, DOMAINS, samp, fmt_num, setup, dir) {
     rank_map <- c(
         "Phylum" = "Phyla", "Class" = "Classes", "Order" = "Orders",
         "Family" = "Families", "Genus" = "Genera", "Species" = "Species"
     )
+    plots <- list()
+    paths <- character(0)
     for (r in names(rank_map)) {
         leg_taxa <- r
         leg_reads <- paste0(r, "-exclusive Reads")
@@ -277,32 +260,33 @@
             patchwork::plot_layout(guides = "collect") &
             ggplot2::theme(legend.position = "bottom")
         fname <- paste0(samp, "_CS_Retention_", rank_map[[r]], ".pdf")
-        ggplot2::ggsave(
-            file.path(output_dir, fname), layout,
-            width = get_kariocas_dims()$width, height = get_kariocas_dims()$height
-        )
-        log_msg("    -> Generated: ", fname)
+        plots[[rank_map[[r]]]] <- layout
+        paths <- c(paths, .kcs_save_plot(layout, fname, setup, dir = dir))
     }
+    list(plots = plots, paths = paths)
 }
 
 #' @noRd
-.tr_process_sample <- function(df_proc, samp, DOMAINS, output_dir, log_msg) {
+.tr_process_sample <- function(df_proc, samp, DOMAINS, setup, dir) {
     fmt_num <- function(x) format(x, big.mark = ",", scientific = FALSE)
+    log_msg <- setup$log_msg
     log_msg("------------------------------------------------")
     log_msg("  Processing Sample: ", samp)
     df_samp <- dplyr::filter(df_proc, .data$sample == samp)
     baseline <- .tr_baseline_stats(df_samp, log_msg, fmt_num)
     df_calc <- .tr_compute_pct(baseline$stats_df, baseline$baseline_df)
-    .tr_save_plot_a(
-        df_calc, baseline$baseline_df, DOMAINS, samp,
-        fmt_num, output_dir, log_msg
+    a <- .tr_save_plot_a(
+        df_calc, baseline$baseline_df, DOMAINS, samp, fmt_num, setup, dir
     )
-    .tr_save_plots_b(df_calc, DOMAINS, samp, fmt_num, output_dir, log_msg)
+    b <- .tr_save_plots_b(df_calc, DOMAINS, samp, fmt_num, setup, dir)
+    plots <- c(a$plots, b$plots)
+    names(plots) <- paste0(samp, "_", names(plots))
+    list(plots = plots, paths = c(a$paths, b$paths))
 }
 
 #' @noRd
-.tr_group_overlay <- function(full_audit, DOMAINS, tax_level, method,
-                              output_dir, log_msg) {
+.tr_group_overlay <- function(full_audit, DOMAINS, tax_level, method, setup) {
+    log_msg <- setup$log_msg
     df <- full_audit
     df$Group <- .grp_parse_group(df$Sample)
     df$sample <- df$Sample
@@ -322,19 +306,21 @@
             ) +
             ggplot2::scale_y_continuous(limits = c(0, 105))
     }
+    plots <- list()
+    paths <- character(0)
     for (grp in unique(df$Group)) {
         df_g <- dplyr::filter(df, .data$Group == grp)
         n_samples <- dplyr::n_distinct(df_g$sample)
         prim_g <- dplyr::filter(prim, .data$Domain %in% unique(df_g$Domain))
         vlines <- stats::setNames(prim_g$vline, prim_g$Domain)
         log_msg("  Group: ", grp, " (", n_samples, " samples)")
-        plots <- .grp_overlay_plots(
+        plots_g <- .grp_overlay_plots(
             df_g, DOMAINS, lbls$y_confidence, "**% Retained**",
             apply_scales,
             vlines = vlines
         )
-        .grp_assemble_2x2(
-            plots,
+        out <- .grp_assemble_2x2(
+            plots_g,
             paste0(grp, " - Group Retention (", tax_level, ")"),
             paste0(
                 "n = ", n_samples,
@@ -342,9 +328,12 @@
                 method, ")"
             ),
             paste0(grp, "_Group_Retention_", tax_level, ".pdf"),
-            output_dir, log_msg
+            setup
         )
+        plots[[paste0(grp, "_Group_Retention")]] <- out$plot
+        paths <- c(paths, out$path)
     }
+    list(plots = plots, paths = paths)
 }
 
 # ==============================================================================
@@ -383,10 +372,19 @@
 #'   renders every sample; a comma-separated string such as
 #'   \code{"SAMPLE33, SAMPLE45"} (or a character vector) renders just those.
 #'   Detailed PDFs are saved to a \code{per_sample/} subfolder.
+#' @param export Logical (default \code{TRUE}). When \code{TRUE}, PDF plots,
+#'   the \code{SI_Audit_<rank>.tsv}/\code{.rds} files and a log are written to
+#'   \code{<project_dir>/002_taxa_retention/}. When \code{FALSE}, nothing is
+#'   written to disk and all results are only returned. Note that
+#'   \code{\link{retrieve_selected_taxa}} with \code{CS_* = "auto"} reads the
+#'   exported audit file, so run this step with \code{export = TRUE} before it.
 #'
-#' @return Invisibly returns a \code{data.frame} with the full SI audit trail.
-#'   PDF plots and \code{SI_Audit_<rank>} files are saved to
-#'   \code{<project_dir>/002_taxa_retention/}.
+#' @return A \code{\link{kariocas_result}} object with \code{$data}, the SI
+#'   audit table (one row per sample, domain and CS, with the retention
+#'   percentages and the Stability Index tags), \code{$plots}, a named list of
+#'   \code{patchwork} figures (one group overlay per biological group, plus the
+#'   detailed per-sample panels when requested) and \code{$paths}, the files
+#'   written when \code{export = TRUE}.
 #' @export
 #' @importFrom dplyr filter select group_by summarise mutate left_join arrange
 #'   rename bind_rows pull distinct n_distinct case_when all_of lag
@@ -399,10 +397,25 @@
 #' @importFrom stats median setNames
 #' @importFrom ggtext element_markdown
 #' @examples
-#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#' # Copy the bundled toy project to a temporary folder and import it
+#' toy_project <- file.path(tempdir(), "toy_karioCaS")
+#' dir.create(toy_project, showWarnings = FALSE)
+#' file.copy(
+#'     system.file("extdata", "your_project_name", "000_mpa_original",
+#'         package = "karioCaS"
+#'     ),
+#'     toy_project, recursive = TRUE
+#' )
+#' import_karioCaS(toy_project)
 #'
-#' # Group retention overlay + optimal CS (default Kneedle method)
-#' # taxa_retention(project_dir = toy_project)
+#' # Retention curves + optimal CS (Kneedle), results kept in memory only
+#' res <- taxa_retention(toy_project, export = FALSE)
+#' res
+#' head(res$data)
+#' names(res$plots)
+#' res$plots[[1]]
+#'
+#' unlink(toy_project, recursive = TRUE)
 taxa_retention <- function(project_dir,
                            tax_level = "Species",
                            method = c(
@@ -410,9 +423,10 @@ taxa_retention <- function(project_dir,
                                "dynamic", "manual"
                            ),
                            manual_toll = 1.0,
-                           detail_samples = NULL) {
+                           detail_samples = NULL,
+                           export = TRUE) {
     method <- match.arg(method)
-    setup <- .tr_setup(project_dir)
+    setup <- .tr_setup(project_dir, export)
     df_proc <- .tr_load_data(project_dir, setup$log_msg)
     DOMAINS <- names(get_kariocas_colors("domains"))
     SAMPLES <- unique(df_proc$sample)
@@ -432,31 +446,34 @@ taxa_retention <- function(project_dir,
             if (!is.null(a)) audit_list[[length(audit_list) + 1]] <- a
         }
     }
-    full_audit <- .si_export_audit(
-        audit_list, tax_level, setup$output_dir, setup$log_msg
-    )
+    audit <- .si_export_audit(audit_list, tax_level, setup)
+    full_audit <- audit$data
+    plots <- list()
+    paths <- audit$paths
 
     if (!is.null(full_audit) && nrow(full_audit) > 0) {
         setup$log_msg(">>> Building group overlay(s)...")
-        .tr_group_overlay(
-            full_audit, DOMAINS, tax_level, method,
-            setup$output_dir, setup$log_msg
-        )
+        ov <- .tr_group_overlay(full_audit, DOMAINS, tax_level, method, setup)
+        plots <- c(plots, ov$plots)
+        paths <- c(paths, ov$paths)
     } else {
         setup$log_msg("    [WARNING] No SI audit produced; skipping overlay.")
     }
 
-    detail <- .grp_resolve_detail(detail_samples, SAMPLES, setup$log_msg)
+    detail <- .grp_resolve_detail(detail_samples, SAMPLES)
     if (length(detail) > 0) {
-        detail_dir <- file.path(setup$output_dir, "per_sample")
-        if (!dir.exists(detail_dir)) dir.create(detail_dir, recursive = TRUE)
+        detail_dir <- if (export) file.path(setup$output_dir, "per_sample") else NULL
         setup$log_msg(
             ">>> Rendering detailed panels for ", length(detail), " sample(s)."
         )
         for (samp in detail) {
-            .tr_process_sample(df_proc, samp, DOMAINS, detail_dir, setup$log_msg)
+            ps <- .tr_process_sample(df_proc, samp, DOMAINS, setup, detail_dir)
+            plots <- c(plots, ps$plots)
+            paths <- c(paths, ps$paths)
         }
     }
-    setup$log_msg("SUCCESS: Retention analysis completed.")
-    invisible(full_audit)
+    .kcs_finish_step(
+        "002_taxa_retention", full_audit, plots, paths, setup, setup$log_msg,
+        what = "retention results"
+    )
 }

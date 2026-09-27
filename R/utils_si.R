@@ -298,18 +298,13 @@ NULL
 
 #' Bind per-domain audits, write TSV + RDS, and return the full audit.
 #' @noRd
-.si_export_audit <- function(audit_list, tax_level, output_dir, log_msg) {
-    log_msg(">>> Consolidating Stability Index audit...")
+.si_export_audit <- function(audit_list, tax_level, setup) {
+    setup$log_msg(">>> Consolidating Stability Index audit...")
     if (length(audit_list) == 0) {
-        log_msg("WARNING: No SI audit data generated. Check inputs.")
-        return(invisible(NULL))
+        setup$log_msg("WARNING: No SI audit data generated. Check inputs.")
+        return(list(data = NULL, paths = character(0)))
     }
     full_audit <- dplyr::bind_rows(audit_list)
-    tsv_path <- file.path(output_dir, paste0("SI_Audit_", tax_level, ".tsv"))
-    rds_path <- file.path(output_dir, paste0("SI_Audit_", tax_level, ".rds"))
-    readr::write_tsv(full_audit, tsv_path)
-    readr::write_rds(full_audit, rds_path)
-    log_msg("SAVED SI AUDIT TSV: ", tsv_path)
-    log_msg("SAVED SI AUDIT RDS: ", rds_path)
-    full_audit
+    paths <- .kcs_save_table(full_audit, paste0("SI_Audit_", tax_level), setup)
+    list(data = full_audit, paths = paths)
 }

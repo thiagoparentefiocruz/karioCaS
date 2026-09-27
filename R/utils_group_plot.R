@@ -32,13 +32,12 @@ NULL
 #'
 #' Accepts \code{NULL} (no detail), the string \code{"all"}, a comma-separated
 #' string such as \code{"SAMPLE33, SAMPLE45"}, or a character vector. Unknown
-#' names are dropped with a warning.
+#' names raise an error listing the available samples.
 #' @param detail_samples User input.
 #' @param all_samples Character vector of valid sample names.
-#' @param log_msg Logging closure.
 #' @return Character vector of sample names to render in detail (possibly empty).
 #' @noRd
-.grp_resolve_detail <- function(detail_samples, all_samples, log_msg) {
+.grp_resolve_detail <- function(detail_samples, all_samples) {
     if (is.null(detail_samples)) {
         return(character(0))
     }
@@ -53,12 +52,14 @@ NULL
     detail_samples <- detail_samples[nzchar(detail_samples)]
     unknown <- setdiff(detail_samples, all_samples)
     if (length(unknown) > 0) {
-        log_msg(
-            "    [WARNING] Unknown sample(s) ignored: ",
-            paste(unknown, collapse = ", ")
+        stop(
+            "Unknown sample name(s) in 'detail_samples': ",
+            paste(unknown, collapse = ", "),
+            ". Available samples: ", paste(all_samples, collapse = ", "),
+            call. = FALSE
         )
     }
-    intersect(detail_samples, all_samples)
+    unique(detail_samples)
 }
 
 #' Draw one domain panel of the group overlay
@@ -150,14 +151,17 @@ NULL
     )
 }
 
-#' Assemble a 2x2 domain panel and save it
+#' Assemble a 2x2 domain panel and save it when exporting
 #'
 #' @param plots Named list of ggplots (Bacteria/Archaea/Eukaryota/Viruses).
 #' @param title,subtitle Annotation strings.
 #' @param fname Output file name.
-#' @param output_dir,log_msg Output dir and logging closure.
+#' @param setup Step setup list (see \code{.kcs_setup_step()}).
+#' @param dir Optional target directory (defaults to \code{setup$output_dir}).
+#' @return A list with \code{plot} (the patchwork object) and \code{path}
+#'   (\code{NULL} when not exporting).
 #' @noRd
-.grp_assemble_2x2 <- function(plots, title, subtitle, fname, output_dir, log_msg) {
+.grp_assemble_2x2 <- function(plots, title, subtitle, fname, setup, dir = NULL) {
     layout <- (plots[["Bacteria"]] | plots[["Archaea"]]) /
         (plots[["Eukaryota"]] | plots[["Viruses"]]) +
         patchwork::plot_annotation(
@@ -172,10 +176,5 @@ NULL
                 )
             )
         )
-    ggplot2::ggsave(
-        file.path(output_dir, fname), layout,
-        width = get_kariocas_dims()$width,
-        height = get_kariocas_dims()$height
-    )
-    log_msg("    -> Generated: ", fname)
+    list(plot = layout, path = .kcs_save_plot(layout, fname, setup, dir = dir))
 }

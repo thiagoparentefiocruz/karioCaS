@@ -108,15 +108,22 @@ While visual exploration is crucial, choosing the optimal Confidence Score manua
 * **Segmented:** A Broken-Stick regression model that finds regime shifts (e.g. ecology investigations and discovering biological dark matter).
 * **Dynamic / Manual:** First CS whose step-wise loss is within tail noise, or an expert-defined loss toll per domain.
 
-`taxa_retention()` returns the SI audit invisibly, so you can inspect the chosen thresholds directly:
+Every analysis step returns a `kariocas_result` object: `$data` holds the computed table, `$plots` the figures (as `ggplot`/`patchwork` objects you can print or modify) and `$paths` the files written. With the default `export = TRUE` the same results are also saved under the step folder; `export = FALSE` keeps everything in memory, which is handy while trying different `method` or `tax_level` values:
 
 ```{r optimize_cs}
-# taxa_retention() computes the Stability Index (default Kneedle) and returns
-# the audit. SI_Audit_Species.tsv/.rds are also written to 002_taxa_retention/.
-audit_df <- taxa_retention(project_dir = proj_dir, tax_level = "Species")
+# taxa_retention() computes the Stability Index (default Kneedle).
+# SI_Audit_Species.tsv/.rds and the group overlay are written to
+# 002_taxa_retention/ because export = TRUE (the default).
+retention <- taxa_retention(project_dir = proj_dir, tax_level = "Species")
+retention
 
-# View the mathematical assessment for the Primary SIs
+# The SI audit table: the mathematical assessment behind each Primary SI
+audit_df <- retention$data
 head(audit_df[audit_df$SI_Type == "Primary_SI", c("Sample", "Domain", "CS", "Taxa_Count", "Step_Loss_Pct")])
+
+# The group overlay figure, available as an object
+names(retention$plots)
+retention$plots[[1]]
 ```
 
 `taxa_retention()` always saves an objective audit trail (`SI_Audit_<rank>.rds` and `.tsv`) covering every sample, and marks each domain's **median Primary SI** as a dashed reference line on the group overlay.
@@ -125,7 +132,8 @@ The same idea applies to read depth: `reads_per_taxa()` finds the optimal **mini
 
 ```{r reads_audit}
 # Optimal minimum reads per domain (writes Reads_Audit_Species.tsv/.rds)
-reads_audit <- reads_per_taxa(project_dir = proj_dir, analysis_level = "Species")
+reads <- reads_per_taxa(project_dir = proj_dir, analysis_level = "Species")
+head(reads$data[reads$data$SI_Type == "Primary_SI", ])
 ```
 
 ***
