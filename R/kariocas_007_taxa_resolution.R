@@ -3,28 +3,12 @@
 # ==============================================================================
 
 #' @noRd
-.txr_setup <- function(project_dir, parent_level, child_level) {
-    output_dir <- file.path(project_dir, "007_taxa_resolution")
-    log_dir <- file.path(project_dir, "logs")
-    if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-    if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_007_taxa_resolution.txt")
-    writeLines(c(
-        "====================================================",
-        "LOG: 007_TAXA_RESOLUTION",
-        paste0("PROJECT DIR: ", project_dir),
-        paste0("ANALYSIS: ", parent_level, " vs ", child_level),
-        "===================================================="
-    ), con = log_file)
-    log_msg <- function(...) {
-        msg <- paste0(...)
-        message(msg)
-        write(
-            paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg),
-            file = log_file, append = TRUE
-        )
-    }
-    list(output_dir = output_dir, log_msg = log_msg)
+.txr_setup <- function(project_dir, parent_level, child_level, export = TRUE) {
+    .kcs_setup_step(
+        project_dir, "007_taxa_resolution", "log_007_taxa_resolution.txt",
+        export = export,
+        extra_header = paste0("ANALYSIS: ", parent_level, " vs ", child_level)
+    )
 }
 
 #' @noRd
@@ -200,7 +184,7 @@
                              top_n, log_msg) {
     calc_df <- .txr_calc_resolution(df_dom, parent_level, child_level, top_n)
     if (is.null(calc_df)) {
-        return(plot_kariocas_empty(dom, "No Data"))
+        return(list(plot = plot_kariocas_empty(dom, "No Data"), data = NULL))
     }
     .txr_audit_log(calc_df, log_msg)
     res <- .txr_build_stack(calc_df, top_n, parent_level, child_level)
@@ -210,7 +194,7 @@
         c(res$label_excl, res$label_chld)
     )
     clean_labels <- function(x) ifelse(grepl("^Ghost_", x), "", x)
-    ggplot2::ggplot(
+    p <- ggplot2::ggplot(
         res$stack,
         ggplot2::aes(x = .data$Reads, y = .data$Parent_Name, fill = .data$Category)
     ) +
@@ -226,11 +210,12 @@
             legend.position    = "bottom",
             legend.title       = ggplot2::element_blank()
         )
+    list(plot = p, data = dplyr::mutate(calc_df, Domain = dom))
 }
 
 #' @noRd
 .txr_save_panel <- function(plots, samp, label,
-                            parent_level, child_level, output_dir, log_msg) {
+                            parent_level, child_level, setup) {
     layout <- (plots[["Bacteria"]] | plots[["Archaea"]]) /
         (plots[["Eukaryota"]] | plots[["Viruses"]]) +
         patchwork::plot_annotation(
@@ -251,29 +236,37 @@
         samp, "_Resolution_", parent_level, "_vs_", child_level,
         "_", label, ".pdf"
     )
-    ggplot2::ggsave(
-        file.path(output_dir, fname), layout,
-        width = get_kariocas_dims()$width,
-        height = get_kariocas_dims()$height
-    )
-    log_msg("    -> Generated: ", fname)
+    list(plot = layout, path = .kcs_save_plot(layout, fname, setup))
 }
 
 #' @noRd
 .txr_render_sample <- function(df_samp, samp, label, parent_level, child_level,
-                               DOMAINS, top_n, output_dir, log_msg) {
-    log_msg("  Sample: ", samp)
-    plots <- stats::setNames(
+                               DOMAINS, top_n, setup) {
+    setup$log_msg("  Sample: ", samp)
+    per_dom <- stats::setNames(
         lapply(DOMAINS, function(dom) {
             df_dom <- dplyr::filter(df_samp, .data$Domain == dom)
             .txr_domain_plot(
-                df_dom, dom, parent_level, child_level, top_n, log_msg
+                df_dom, dom, parent_level, child_level, top_n, setup$log_msg
             )
         }),
         DOMAINS
     )
-    .txr_save_panel(
-        plots, samp, label, parent_level, child_level, output_dir, log_msg
+    data <- dplyr::bind_rows(lapply(per_dom, `[[`, "data"))
+    if (nrow(data) == 0) {
+        setup$log_msg(
+            "    Skipping ", samp, ": no ", parent_level, "/", child_level,
+            " data in any domain."
+        )
+        return(NULL)
+    }
+    panel <- .txr_save_panel(
+        lapply(per_dom, `[[`, "plot"), samp, label,
+        parent_level, child_level, setup
+    )
+    list(
+        data = dplyr::mutate(data, sample = samp, Source = label, .before = 1),
+        plot = panel$plot, path = panel$path
     )
 }
 
@@ -301,9 +294,16 @@
 #'   fraction \code{0-1} or percentage \code{0-100}) analyses the imported data
 #'   at that single CS instead of every CS.
 #' @param top_n Number of top taxa to display per domain (default: 10).
+#' @param export Logical (default \code{TRUE}). When \code{TRUE}, one PDF per
+#'   sample and a log are written to \code{<project_dir>/007_taxa_resolution/}.
+#'   When \code{FALSE}, nothing is written and the results are only returned.
 #'
-#' @return Invisibly returns \code{NULL}. PDF plots are saved to
-#'   \code{<project_dir>/007_taxa_resolution/}.
+#' @return A \code{\link{kariocas_result}} object. \code{$data} holds, for
+#'   each sample, domain and top parent taxon, the parent's cumulative reads
+#'   (\code{Parent_Cumulative_Total}), the reads resolved to the child rank
+#'   (\code{Child_Sum_Resolved}) and the parent-exclusive reads
+#'   (\code{Parent_Exclusive}); \code{$plots} one \code{patchwork} figure per
+#'   sample; \code{$paths} the files written when \code{export = TRUE}.
 #' @export
 #' @importFrom dplyr filter mutate select group_by summarise arrange slice_head
 #'   left_join bind_rows distinct case_when pull rename all_of desc
@@ -316,19 +316,31 @@
 #' @importFrom ggtext element_markdown
 #' @importFrom SummarizedExperiment rowData
 #' @examples
-#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#' # Copy the bundled toy project to a temporary folder and import it
+#' toy_project <- file.path(tempdir(), "toy_karioCaS")
+#' dir.create(toy_project, showWarnings = FALSE)
+#' file.copy(
+#'     system.file("extdata", "your_project_name", "000_mpa_original",
+#'         package = "karioCaS"
+#'     ),
+#'     toy_project, recursive = TRUE
+#' )
+#' import_karioCaS(toy_project)
 #'
-#' # Default: resolution of the final mosaic (Genus vs Species, top 10)
-#' # taxa_resolution(project_dir = toy_project)
+#' # Genus vs Species resolution of the imported data at CS 40, in memory
+#' res <- taxa_resolution(toy_project, CS = 40, export = FALSE)
+#' res
+#' head(res$data)
+#' res$plots[[1]]
 #'
-#' # Analyse the imported data at a single Confidence Score
-#' # taxa_resolution(project_dir = toy_project, CS = 40)
+#' unlink(toy_project, recursive = TRUE)
 taxa_resolution <- function(project_dir,
                             parent_level = "Genus",
                             child_level = "Species",
                             CS = NULL,
-                            top_n = 10) {
-    setup <- .txr_setup(project_dir, parent_level, child_level)
+                            top_n = 10,
+                            export = TRUE) {
+    setup <- .txr_setup(project_dir, parent_level, child_level, export)
     DOMAINS <- names(get_kariocas_colors("domains"))
 
     if (is.null(CS)) {
@@ -337,10 +349,11 @@ taxa_resolution <- function(project_dir,
         )
         label <- "Final_Mosaic"
         if (!any(df_proc$Rank == parent_level, na.rm = TRUE)) {
-            setup$log_msg(
-                "  [WARNING] Mosaic has no '", parent_level,
-                "'-level rows; resolution will be empty. Re-run ",
-                "retrieve_selected_taxa() with tax_level = NULL to keep all ranks."
+            warning(
+                "The final mosaic has no '", parent_level, "'-level rows, ",
+                "so the resolution will be empty. Re-run ",
+                "retrieve_selected_taxa() with tax_level = NULL to keep all ranks.",
+                call. = FALSE
             )
         }
     } else {
@@ -366,14 +379,24 @@ taxa_resolution <- function(project_dir,
     setup$log_msg(
         ">>> Resolution for ", length(SAMPLES), " sample(s) [", label, "]"
     )
+    data <- list()
+    plots <- list()
+    paths <- character(0)
     for (samp in SAMPLES) {
         df_samp <- dplyr::filter(df_proc, .data$sample == samp)
         if (nrow(df_samp) == 0) next
-        .txr_render_sample(
+        out <- .txr_render_sample(
             df_samp, samp, label, parent_level, child_level,
-            DOMAINS, top_n, setup$output_dir, setup$log_msg
+            DOMAINS, top_n, setup
         )
+        if (is.null(out)) next
+        data[[samp]] <- out$data
+        plots[[paste0(samp, "_Resolution_", label)]] <- out$plot
+        paths <- c(paths, out$path)
     }
-    setup$log_msg("SUCCESS: Resolution analysis completed.")
-    invisible(NULL)
+    .kcs_finish_step(
+        "007_taxa_resolution", dplyr::bind_rows(data), plots, paths,
+        setup, setup$log_msg,
+        what = "resolution results"
+    )
 }

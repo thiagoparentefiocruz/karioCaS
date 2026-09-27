@@ -3,27 +3,12 @@
 # ==============================================================================
 
 #' @noRd
-.ups_setup <- function(project_dir) {
-    output_dir <- file.path(project_dir, "005_taxa_intersections_across_CS")
-    log_dir <- file.path(project_dir, "logs")
-    if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-    if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_005_taxa_intersections_cs.txt")
-    writeLines(c(
-        "====================================================",
-        "LOG: 005_TAXA_INTERSECTIONS_ACROSS_CS (karioCaS never are upset)",
-        paste0("PROJECT DIR: ", project_dir),
-        "===================================================="
-    ), con = log_file)
-    log_msg <- function(...) {
-        msg <- paste0(...)
-        message(msg)
-        write(
-            paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg),
-            file = log_file, append = TRUE
-        )
-    }
-    list(output_dir = output_dir, log_msg = log_msg)
+.ups_setup <- function(project_dir, export = TRUE) {
+    .kcs_setup_step(
+        project_dir, "005_taxa_intersections_across_CS",
+        "log_005_taxa_intersections_cs.txt",
+        export = export
+    )
 }
 
 #' @noRd
@@ -54,57 +39,40 @@
         as.data.frame()
 }
 
+#' Build the UpSet object for one sample/domain (does not draw it)
 #' @noRd
-.ups_plot_one <- function(binary_matrix, upset_cols, samp, dom,
-                          lvl, full_path, log_msg) {
-    grDevices::pdf(
-        file    = full_path,
-        width   = get_kariocas_dims()$width,
-        height  = get_kariocas_dims()$height,
-        onefile = FALSE
+.ups_build <- function(binary_matrix, upset_cols, lvl) {
+    UpSetR::upset(
+        binary_matrix,
+        sets                = rev(upset_cols),
+        keep.order          = TRUE,
+        order.by            = "freq",
+        empty.intersections = NULL,
+        mainbar.y.label     = paste(lvl, "Intersections"),
+        sets.x.label        = paste("Total", lvl, "per CS"),
+        text.scale          = c(1.5, 1.5, 1.2, 1.2, 1.5, 1.3),
+        mb.ratio            = c(0.6, 0.4),
+        main.bar.color      = get_kariocas_colors("upset")$main,
+        sets.bar.color      = get_kariocas_colors("upset")$sets,
+        matrix.color        = "grey20",
+        shade.color         = "grey90"
     )
-    tryCatch(
-        {
-            # UpSetR requires explicit method dispatch inside pdf() device.
-            # show() is used here as the Bioconductor-preferred dispatcher.
-            show(
-                UpSetR::upset(
-                    binary_matrix,
-                    sets                = rev(upset_cols),
-                    keep.order          = TRUE,
-                    order.by            = "freq",
-                    empty.intersections = NULL,
-                    mainbar.y.label     = paste(lvl, "Intersections"),
-                    sets.x.label        = paste("Total", lvl, "per CS"),
-                    text.scale          = c(1.5, 1.5, 1.2, 1.2, 1.5, 1.3),
-                    mb.ratio            = c(0.6, 0.4),
-                    main.bar.color      = get_kariocas_colors("upset")$main,
-                    sets.bar.color      = get_kariocas_colors("upset")$sets,
-                    matrix.color        = "grey20",
-                    shade.color         = "grey90"
-                )
-            )
-            grid::grid.text(
-                label = paste(samp, "-", dom, "|", lvl, "Intersection Analysis"),
-                x = 0.5, y = 0.98,
-                gp = grid::gpar(fontsize = 16, fontface = "bold")
-            )
-            log_msg("    -> Generated: ", basename(full_path))
-        },
-        error = function(e) {
-            log_msg("    ERROR plotting ", basename(full_path), ": ", e$message)
-        }
-    )
-    grDevices::dev.off()
 }
 
 #' @noRd
-.ups_process_sample <- function(df_long, samp, DOMAINS, lvl,
-                                output_dir, log_msg) {
+.ups_process_sample <- function(df_long, samp, DOMAINS, lvl, setup) {
+    log_msg <- setup$log_msg
     log_msg("------------------------------------------------")
     log_msg("  Processing Sample: ", samp)
-    samp_dir <- file.path(output_dir, samp)
-    if (!dir.exists(samp_dir)) dir.create(samp_dir)
+    samp_dir <- if (isTRUE(setup$export)) {
+        file.path(setup$output_dir, samp)
+    } else {
+        NULL
+    }
+    data <- list()
+    plots <- list()
+    paths <- character(0)
+    failed <- character(0)
     for (dom in DOMAINS) {
         mat <- .ups_binary_matrix(df_long, samp, dom, lvl)
         if (is.null(mat)) {
@@ -120,10 +88,38 @@
             )
             next
         }
-        fname <- paste0(samp, "_", dom, "_", lvl, "_UpSet.pdf")
-        full_path <- file.path(samp_dir, fname)
-        .ups_plot_one(mat, upset_cols, samp, dom, lvl, full_path, log_msg)
+        key <- paste0(samp, "_", dom, "_", lvl)
+        up <- tryCatch(
+            .ups_build(mat, upset_cols, lvl),
+            error = function(e) {
+                failed <<- c(failed, paste0(key, ": ", conditionMessage(e)))
+                NULL
+            }
+        )
+        if (is.null(up)) next
+        data[[dom]] <- data.frame(
+            sample = samp, Domain = dom, Rank = lvl, mat,
+            N_CS = rowSums(mat[, upset_cols, drop = FALSE]),
+            check.names = FALSE, stringsAsFactors = FALSE
+        )
+        if (!is.null(samp_dir)) {
+            path <- .kcs_draw_upset_pdf(
+                up, file.path(samp_dir, paste0(key, "_UpSet.pdf")),
+                paste(samp, "-", dom, "|", lvl, "Intersection Analysis"),
+                log_msg
+            )
+            if (is.character(path) && !file.exists(path)) {
+                failed <- c(failed, paste0(key, ": ", attr(path, "error")))
+                next
+            }
+            paths <- c(paths, path)
+        }
+        plots[[key]] <- up
     }
+    list(
+        data = dplyr::bind_rows(data), plots = plots,
+        paths = paths, failed = failed
+    )
 }
 
 # ==============================================================================
@@ -138,9 +134,21 @@
 #'
 #' @param project_dir Path to the project root.
 #' @param tax_level Taxonomic rank to analyze (default: \code{"Species"}).
+#' @param export Logical (default \code{TRUE}). When \code{TRUE}, one PDF per
+#'   sample and domain is written to a per-sample subfolder of
+#'   \code{<project_dir>/005_taxa_intersections_across_CS/}, together with a
+#'   log. When \code{FALSE}, nothing is written and the UpSet plots are only
+#'   returned.
 #'
-#' @return Invisibly returns \code{NULL}. PDF plots are saved to
-#'   \code{<project_dir>/005_taxa_intersections_across_CS/}.
+#' @return A \code{\link{kariocas_result}} object. \code{$data} is the
+#'   presence/absence table behind the plots: one row per sample, domain and
+#'   taxon, one \code{CSxx} column per Confidence Score (1 = detected with
+#'   at least one read at that CS) and \code{N_CS}, the number of CS levels
+#'   at which the taxon is detected. \code{$plots} holds one \code{UpSetR}
+#'   plot per sample and domain; printing an element draws it on the current
+#'   device. \code{$paths} lists the PDFs written when \code{export = TRUE}.
+#'   If a plot cannot be drawn, a warning names it and it is not counted as a
+#'   success.
 #' @export
 #' @importFrom dplyr filter mutate select distinct case_when pull
 #' @importFrom tidyr pivot_wider
@@ -148,12 +156,26 @@
 #' @importFrom grDevices pdf dev.off
 #' @importFrom grid grid.text gpar
 #' @examples
-#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#' # Copy the bundled toy project to a temporary folder and import it
+#' toy_project <- file.path(tempdir(), "toy_karioCaS")
+#' dir.create(toy_project, showWarnings = FALSE)
+#' file.copy(
+#'     system.file("extdata", "your_project_name", "000_mpa_original",
+#'         package = "karioCaS"
+#'     ),
+#'     toy_project, recursive = TRUE
+#' )
+#' import_karioCaS(toy_project)
 #'
-#' # upset_kariocas(project_dir = toy_project)
-#' # upset_kariocas(project_dir = toy_project, tax_level = "Genus")
-upset_kariocas <- function(project_dir, tax_level = "Species") {
-    setup <- .ups_setup(project_dir)
+#' # Genus persistence across Confidence Scores, kept in memory
+#' res <- upset_kariocas(toy_project, tax_level = "Genus", export = FALSE)
+#' res
+#' head(res$data)
+#' res$plots[["SAMPLE01_Bacteria_Genus"]]
+#'
+#' unlink(toy_project, recursive = TRUE)
+upset_kariocas <- function(project_dir, tax_level = "Species", export = TRUE) {
+    setup <- .ups_setup(project_dir, export)
     setup$log_msg(">>> Loading Data...")
     df_long <- .get_tidy_data(project_dir)
     if (!tax_level %in% unique(df_long$Rank)) {
@@ -168,12 +190,17 @@ upset_kariocas <- function(project_dir, tax_level = "Species") {
         ">>> Starting UpSet Analysis (", tax_level, ") for ",
         length(SAMPLES), " samples."
     )
-    for (samp in SAMPLES) {
-        .ups_process_sample(
-            df_long, samp, DOMAINS, tax_level,
-            setup$output_dir, setup$log_msg
-        )
-    }
-    setup$log_msg("SUCCESS: UpSet analysis completed.")
-    invisible(NULL)
+    results <- lapply(SAMPLES, function(samp) {
+        .ups_process_sample(df_long, samp, DOMAINS, tax_level, setup)
+    })
+    .kcs_warn_failed_plots(unlist(lapply(results, `[[`, "failed")), setup$log_msg)
+    plots <- do.call(c, unname(lapply(results, `[[`, "plots")))
+    .kcs_finish_step(
+        "005_taxa_intersections_across_CS",
+        dplyr::bind_rows(lapply(results, `[[`, "data")),
+        if (is.null(plots)) list() else plots,
+        unlist(lapply(results, `[[`, "paths")),
+        setup, setup$log_msg,
+        what = "UpSet plots"
+    )
 }

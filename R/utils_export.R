@@ -208,3 +208,64 @@ print.kariocas_result <- function(x, ...) {
     }
     invisible(x)
 }
+
+#' Draw an UpSetR object into a PDF file
+#'
+#' UpSetR draws directly on a graphics device, so it cannot be saved with
+#' \code{ggsave()}. Drawing errors are caught and reported to the caller
+#' (never swallowed): on failure the returned path carries an \code{"error"}
+#' attribute and the partial file is removed.
+#' @param up An object returned by \code{UpSetR::upset()}.
+#' @param path Output PDF path.
+#' @param title Title drawn at the top of the page.
+#' @param log_msg Logging closure.
+#' @param draw Function used to draw \code{up} (injectable for testing).
+#' @return \code{path}, invisibly.
+#' @noRd
+.kcs_draw_upset_pdf <- function(up, path, title, log_msg,
+                                draw = methods::show) {
+    if (!dir.exists(dirname(path))) dir.create(dirname(path), recursive = TRUE)
+    grDevices::pdf(
+        file = path, width = get_kariocas_dims()$width,
+        height = get_kariocas_dims()$height, onefile = FALSE
+    )
+    err <- tryCatch(
+        {
+            # UpSetR objects are drawn by their print method; show() dispatches
+            # to it (BiocCheck discourages print() outside show methods).
+            draw(up)
+            grid::grid.text(
+                label = title, x = 0.5, y = 0.98,
+                gp = grid::gpar(fontsize = 14, fontface = "bold")
+            )
+            NULL
+        },
+        error = function(e) conditionMessage(e),
+        finally = grDevices::dev.off()
+    )
+    if (!is.null(err)) {
+        log_msg("    ERROR plotting ", basename(path), ": ", err)
+        unlink(path)
+        attr(path, "error") <- err
+        return(invisible(path))
+    }
+    log_msg("    -> Generated: ", basename(path))
+    invisible(path)
+}
+
+#' Turn failed UpSet drawings into a visible warning
+#' @param failed Character vector of "plot: error message" entries.
+#' @param log_msg Logging closure.
+#' @noRd
+.kcs_warn_failed_plots <- function(failed, log_msg) {
+    if (length(failed) == 0) {
+        return(invisible(NULL))
+    }
+    log_msg("  [WARNING] ", length(failed), " plot(s) could not be drawn.")
+    warning(
+        length(failed), " UpSet plot(s) could not be drawn and were not ",
+        "written:\n  ", paste(failed, collapse = "\n  "),
+        call. = FALSE
+    )
+    invisible(NULL)
+}

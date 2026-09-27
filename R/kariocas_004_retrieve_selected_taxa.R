@@ -3,21 +3,43 @@
 # ==============================================================================
 
 #' @noRd
-.rst_setup <- function(project_dir) {
-    output_dir <- file.path(project_dir, "004_final_mosaic")
-    log_dir <- file.path(project_dir, "logs")
-    if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-    if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_004_final_mosaic.txt")
-    log_msg <- function(...) {
-        msg <- paste0(...)
-        message(msg)
-        write(
-            paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg),
-            file = log_file, append = TRUE
-        )
+.rst_setup <- function(project_dir, export = TRUE) {
+    .kcs_setup_step(
+        project_dir, "004_final_mosaic", "log_004_final_mosaic.txt",
+        export = export
+    )
+}
+
+#' Validate the per-domain threshold arguments up front
+#' @noRd
+.rst_validate_configs <- function(configs) {
+    for (dom in names(configs)) {
+        for (arg in c("val", "min_val")) {
+            v <- configs[[dom]][[arg]]
+            label <- if (arg == "val") "CS_" else "reads_min_"
+            label <- paste0(label, substr(dom, 1, 1))
+            if (length(v) != 1 || is.na(v)) {
+                stop("'", label, "' must be a single value.", call. = FALSE)
+            }
+            if (tolower(as.character(v)) %in% c("auto", "secondary")) next
+            n <- suppressWarnings(as.numeric(v))
+            if (is.na(n) || n < 0) {
+                stop(
+                    "Invalid '", label, "': ", v,
+                    ". Use \"auto\", \"secondary\" or a non-negative number.",
+                    call. = FALSE
+                )
+            }
+            if (arg == "val" && is.na(.cs_arg_to_percent(v))) {
+                stop(
+                    "Invalid '", label, "': ", v,
+                    ". Use a Kraken fraction (0-1) or a percentage (0-100).",
+                    call. = FALSE
+                )
+            }
+        }
     }
-    list(output_dir = output_dir, log_msg = log_msg)
+    invisible(TRUE)
 }
 
 #' @noRd
@@ -86,12 +108,13 @@
         file.path("006_optimize_CS", audit_name)
     )
     if (!file.exists(audit_file)) {
-        log_msg("  [WARNING] Audit file not found: ", audit_file)
-        log_msg(
-            "  Ensure you ran taxa_retention() (Step 002).",
-            " Fallback to CS = 0."
+        stop(
+            "CS_* = \"auto\"/\"secondary\" needs the Stability Index audit ",
+            "'", audit_name, "', which was not found in ", project_dir, ". ",
+            "Run taxa_retention(project_dir, tax_level = \"", audit_tax,
+            "\", export = TRUE) first, or give numeric CS values.",
+            call. = FALSE
         )
-        return(NULL)
     }
     audit_df <- readRDS(audit_file)
     log_msg("  -> SI Audit loaded successfully for level: ", audit_tax)
@@ -196,9 +219,13 @@
         file.path("003_cutoffs", reads_name)
     )
     if (!file.exists(f)) {
-        log_msg("  [WARNING] Reads audit not found: ", f)
-        log_msg("  Ensure you ran reads_per_taxa() (Step 003). Fallback to 0.")
-        return(NULL)
+        stop(
+            "reads_min_* = \"auto\"/\"secondary\" needs the reads audit ",
+            "'", reads_name, "', which was not found in ", project_dir, ". ",
+            "Run reads_per_taxa(project_dir, analysis_level = \"", audit_tax,
+            "\", export = TRUE) first, or give numeric minimum reads.",
+            call. = FALSE
+        )
     }
     log_msg("  -> Reads audit loaded for level: ", audit_tax)
     readRDS(f)
@@ -240,22 +267,40 @@
 
 #' @noRd
 .rst_process_sample <- function(samp, count_matrix, row_meta, all_cols,
-                                configs, audit_df, reads_audit,
-                                output_dir, log_msg) {
+                                configs, audit_df, reads_audit, setup) {
+    log_msg <- setup$log_msg
     log_msg("----------------------------------------------------")
     log_msg("  Sample: ", samp)
+    issues <- character(0)
     samp_cols <- grep(paste0("^", samp, "_CS"), all_cols, value = TRUE)
     available_suffixes <- stringr::str_remove(samp_cols, paste0("^", samp, "_CS"))
     taxa_list <- list()
     for (dom in names(configs)) {
         cfg <- configs[[dom]]
         resolved <- .rst_resolve_cs(cfg$val, dom, samp, audit_df, log_msg)
+        if (grepl("Fail", resolved$tag)) {
+            issues <- c(issues, paste0(
+                samp, "/", dom, ": no ", cfg$val, " CS in the SI audit, used CS 0"
+            ))
+        }
         match_suf <- .rst_match_column(samp, resolved$val, available_suffixes, log_msg)
-        if (is.null(match_suf)) next
+        if (is.null(match_suf)) {
+            issues <- c(issues, paste0(
+                samp, "/", dom, ": CS ", resolved$val,
+                " not available, domain skipped"
+            ))
+            next
+        }
         target_col <- paste0(samp, "_CS", match_suf)
         reads_res <- .rst_resolve_reads(
             cfg$min_val, dom, samp, resolved$val, reads_audit, log_msg
         )
+        if (grepl("none", reads_res$tag)) {
+            issues <- c(issues, paste0(
+                samp, "/", dom, ": no ", cfg$min_val,
+                " minimum reads at CS ", resolved$val, ", used 0"
+            ))
+        }
         part_df <- .rst_filter_domain(
             count_matrix, row_meta, target_col, dom, reads_res$val
         )
@@ -267,27 +312,40 @@
             nrow(part_df), dom, cs_display, resolved$tag,
             reads_res$val, reads_res$tag
         ))
-        taxa_list[[dom]] <- part_df
+        taxa_list[[dom]] <- dplyr::mutate(
+            part_df,
+            Domain = dom, CS = resolved$val, CS_Source = resolved$tag,
+            Min_Reads = reads_res$val, Min_Reads_Source = reads_res$tag
+        )
     }
     if (length(taxa_list) == 0) {
         log_msg("    -> FAILED: No output generated for ", samp)
-        return(FALSE)
+        return(list(data = NULL, paths = character(0), issues = issues))
     }
-    final_df <- dplyr::bind_rows(taxa_list) |>
+    long_df <- dplyr::bind_rows(taxa_list)
+    final_df <- long_df |>
         dplyr::group_by(.data$Taxonomy) |>
         dplyr::summarise(Counts = sum(.data$Counts), .groups = "drop") |>
         dplyr::rename(!!samp := "Counts")
-    base_name <- paste0(samp, "_karioCaS_Mosaic")
-    mpa_dir <- file.path(output_dir, "mpa")
-    tsv_dir <- file.path(output_dir, "tsv")
-    if (!dir.exists(mpa_dir)) dir.create(mpa_dir, recursive = TRUE)
-    if (!dir.exists(tsv_dir)) dir.create(tsv_dir, recursive = TRUE)
-    readr::write_delim(final_df, file.path(mpa_dir, paste0(base_name, ".mpa")),
-        delim = "\t"
+    paths <- character(0)
+    if (isTRUE(setup$export)) {
+        base_name <- paste0(samp, "_karioCaS_Mosaic")
+        mpa_dir <- file.path(setup$output_dir, "mpa")
+        tsv_dir <- file.path(setup$output_dir, "tsv")
+        if (!dir.exists(mpa_dir)) dir.create(mpa_dir, recursive = TRUE)
+        if (!dir.exists(tsv_dir)) dir.create(tsv_dir, recursive = TRUE)
+        paths <- c(
+            file.path(mpa_dir, paste0(base_name, ".mpa")),
+            file.path(tsv_dir, paste0(base_name, ".tsv"))
+        )
+        readr::write_delim(final_df, paths[1], delim = "\t")
+        readr::write_tsv(final_df, paths[2])
+        log_msg("    -> GENERATED: mpa/", base_name, ".mpa")
+    }
+    list(
+        data = dplyr::mutate(long_df, sample = samp, .before = 1),
+        paths = paths, issues = issues
     )
-    readr::write_tsv(final_df, file.path(tsv_dir, paste0(base_name, ".tsv")))
-    log_msg("    -> GENERATED: mpa/", base_name, ".mpa")
-    TRUE
 }
 
 # ==============================================================================
@@ -325,10 +383,28 @@
 #' @param reads_min_E Minimum reads for Eukaryota. Default: 0.
 #' @param CS_V Character or numeric. CS for Viruses. Default: \code{"auto"}.
 #' @param reads_min_V Minimum reads for Viruses. Default: 0.
+#' @param export Logical (default \code{TRUE}). When \code{TRUE}, one mosaic
+#'   per sample is written to \code{<project_dir>/004_final_mosaic/}
+#'   (\code{.mpa} files under \code{mpa/}, \code{.tsv} files under
+#'   \code{tsv/}) together with a log. When \code{FALSE}, nothing is written
+#'   and the mosaic is only returned; note that \code{\link{taxa_resolution}}
+#'   and \code{\link{group_upset}} read the exported mosaic by default.
 #'
-#' @return Invisibly returns \code{TRUE}. Mosaic files are saved to
-#'   \code{<project_dir>/004_final_mosaic/}, with \code{.mpa} files under
-#'   \code{mpa/} and \code{.tsv} files under \code{tsv/}.
+#' @details
+#' \code{"auto"} and \code{"secondary"} read the audit files exported by
+#' \code{\link{taxa_retention}} and \code{\link{reads_per_taxa}}; if the
+#' required file is missing the function stops with an explanation rather
+#' than silently applying no threshold. When the audit exists but has no
+#' optimal value for a given sample and domain (typically a domain with too
+#' few taxa to fit a curve), CS 0 or 0 minimum reads is used for that domain
+#' and a single warning lists every such case.
+#'
+#' @return A \code{\link{kariocas_result}} object. \code{$data} is the mosaic
+#'   in long format: one row per sample and taxon, with the read
+#'   \code{Counts} at the selected CS, the \code{Domain}, the \code{CS} and
+#'   \code{Min_Reads} applied, and where each threshold came from
+#'   (\code{CS_Source}, \code{Min_Reads_Source}). \code{$plots} is empty and
+#'   \code{$paths} lists the files written when \code{export = TRUE}.
 #' @export
 #' @importFrom readr read_rds write_tsv write_delim
 #' @importFrom dplyr filter mutate select group_by summarise bind_rows
@@ -336,32 +412,51 @@
 #' @importFrom stringr str_detect str_remove str_extract
 #' @importFrom SummarizedExperiment assay rowData
 #' @examples
-#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#' # Copy the bundled toy project to a temporary folder and import it
+#' toy_project <- file.path(tempdir(), "toy_karioCaS")
+#' dir.create(toy_project, showWarnings = FALSE)
+#' file.copy(
+#'     system.file("extdata", "your_project_name", "000_mpa_original",
+#'         package = "karioCaS"
+#'     ),
+#'     toy_project, recursive = TRUE
+#' )
+#' import_karioCaS(toy_project)
 #'
-#' # Fully data-driven mosaic: optimal CS and optimal min-reads per domain
-#' # retrieve_selected_taxa(
-#' #   project_dir = toy_project,
-#' #   tax_level   = "Species",
-#' #   CS_B        = "auto", reads_min_B = "auto",
-#' #   CS_A        = "auto", reads_min_A = "auto",
-#' #   CS_E        = 40,     reads_min_E = 10,
-#' #   CS_V        = 0,      reads_min_V = 0
-#' # )
+#' # "auto" thresholds come from the exported audits of the previous steps
+#' taxa_retention(toy_project)
+#' reads_per_taxa(toy_project)
+#'
+#' # Data-driven CS and minimum reads for Bacteria and Archaea,
+#' # manual thresholds for Eukaryota and Viruses
+#' mosaic <- retrieve_selected_taxa(
+#'     toy_project,
+#'     CS_B = "auto", reads_min_B = "auto",
+#'     CS_A = "auto", reads_min_A = "auto",
+#'     CS_E = 40, reads_min_E = 10,
+#'     CS_V = 0, reads_min_V = 0
+#' )
+#' mosaic
+#' unique(mosaic$data[, c("Domain", "CS", "CS_Source", "Min_Reads")])
+#'
+#' unlink(toy_project, recursive = TRUE)
 retrieve_selected_taxa <- function(project_dir,
                                    tax_level = NULL,
                                    CS_A = "auto", reads_min_A = 0,
                                    CS_B = "auto", reads_min_B = 0,
                                    CS_E = "auto", reads_min_E = 0,
-                                   CS_V = "auto", reads_min_V = 0) {
-    setup <- .rst_setup(project_dir)
-    log_msg <- setup$log_msg
+                                   CS_V = "auto", reads_min_V = 0,
+                                   export = TRUE) {
     configs <- list(
         Archaea   = list(val = CS_A, min_val = reads_min_A),
         Bacteria  = list(val = CS_B, min_val = reads_min_B),
         Eukaryota = list(val = CS_E, min_val = reads_min_E),
         Viruses   = list(val = CS_V, min_val = reads_min_V)
     )
-    tryCatch(
+    .rst_validate_configs(configs)
+    setup <- .rst_setup(project_dir, export)
+    log_msg <- setup$log_msg
+    withCallingHandlers(
         {
             tse_data <- .rst_load_tse(project_dir, log_msg)
             audit_df <- .rst_load_audit(project_dir, tax_level, configs, log_msg)
@@ -369,32 +464,36 @@ retrieve_selected_taxa <- function(project_dir,
                 project_dir, tax_level, configs, log_msg
             )
             log_msg("STEP 2: Processing Mosaics...")
-            n_generated <- sum(vapply(tse_data$SAMPLES, function(samp) {
+            per_sample <- lapply(tse_data$SAMPLES, function(samp) {
                 .rst_process_sample(
                     samp, tse_data$count_matrix, tse_data$row_meta,
-                    tse_data$all_cols, configs, audit_df, reads_audit,
-                    setup$output_dir, log_msg
+                    tse_data$all_cols, configs, audit_df, reads_audit, setup
                 )
-            }, logical(1)))
-            if (n_generated > 0) {
-                log_msg(
-                    "\nSUCCESS: Process completed. Generated ",
-                    n_generated, " mosaic files."
-                )
-            } else {
-                log_msg("\nFAILURE: No files were generated.")
-            }
-            invisible(TRUE)
+            })
         },
         error = function(e) {
-            write(paste0("\nCRITICAL ERROR: ", e$message),
-                file = file.path(
-                    project_dir, "logs",
-                    "log_004_final_mosaic.txt"
-                ),
-                append = TRUE
-            )
-            stop(e$message)
+            if (!is.null(setup$log_file)) {
+                write(paste0("\nCRITICAL ERROR: ", conditionMessage(e)),
+                    file = setup$log_file, append = TRUE
+                )
+            }
         }
+    )
+    issues <- unlist(lapply(per_sample, `[[`, "issues"))
+    if (length(issues) > 0) {
+        log_msg("  [WARNING] Threshold fallbacks: ", paste(issues, collapse = "; "))
+        warning(
+            "Some thresholds could not be resolved as requested:\n  ",
+            paste(issues, collapse = "\n  "),
+            call. = FALSE
+        )
+    }
+    .kcs_finish_step(
+        "004_final_mosaic",
+        dplyr::bind_rows(lapply(per_sample, `[[`, "data")),
+        list(),
+        unlist(lapply(per_sample, `[[`, "paths")),
+        setup, log_msg,
+        what = "mosaic taxa"
     )
 }

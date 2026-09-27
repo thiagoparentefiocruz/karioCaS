@@ -28,7 +28,7 @@ test_that("taxa_resolution(CS = ...) analyses a single Confidence Score", {
 
     expect_message(
         taxa_resolution(project_dir = proj, CS = 40),
-        "SUCCESS: Resolution analysis completed."
+        "SUCCESS: 007_taxa_resolution completed"
     )
     pdfs <- list.files(out_dir, pattern = "\\.pdf$")
     expect_true(length(pdfs) > 0)
@@ -53,7 +53,7 @@ test_that("taxa_resolution default reads the final mosaic", {
 
     expect_message(
         taxa_resolution(project_dir = proj),
-        "SUCCESS: Resolution analysis completed."
+        "SUCCESS: 007_taxa_resolution completed"
     )
     pdfs <- list.files(
         file.path(proj, "007_taxa_resolution"),
@@ -70,5 +70,27 @@ test_that("taxa_resolution errors clearly when no mosaic exists", {
         suppressMessages(taxa_resolution(project_dir = proj)),
         "No mosaic files"
     )
+    unlink(proj, recursive = TRUE)
+})
+
+test_that("taxa_resolution with export = FALSE returns data and plots only", {
+    proj <- .kcs_setup_resolution_proj()
+    res <- suppressMessages(taxa_resolution(proj, CS = 40, export = FALSE))
+    expect_s3_class(res, "kariocas_result")
+    expect_false(dir.exists(file.path(proj, "007_taxa_resolution")))
+    expect_true(nrow(res$data) > 0)
+    expect_true(all(c(
+        "sample", "Domain", "Parent_Name", "Parent_Cumulative_Total",
+        "Child_Sum_Resolved", "Parent_Exclusive"
+    ) %in% colnames(res$data)))
+    # Parent-exclusive reads = parent total minus reads resolved to the child
+    # rank (floored at 0)
+    expect_true(all(res$data$Parent_Exclusive >= 0))
+    expect_equal(
+        res$data$Parent_Exclusive,
+        pmax(0, res$data$Parent_Cumulative_Total - res$data$Child_Sum_Resolved)
+    )
+    expect_true(length(res$plots) > 0)
+    expect_length(res$paths, 0)
     unlink(proj, recursive = TRUE)
 })

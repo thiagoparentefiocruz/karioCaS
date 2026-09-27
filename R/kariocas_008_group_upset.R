@@ -8,27 +8,12 @@
 # ==============================================================================
 
 #' @noRd
-.gup_setup <- function(project_dir) {
-    output_dir <- file.path(project_dir, "008_taxa_intersections_across_samples")
-    log_dir <- file.path(project_dir, "logs")
-    if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-    if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_008_taxa_intersections_samples.txt")
-    writeLines(c(
-        "====================================================",
-        "LOG: 008_TAXA_INTERSECTIONS_ACROSS_SAMPLES (core vs unique taxa across samples)",
-        paste0("PROJECT DIR: ", project_dir),
-        "===================================================="
-    ), con = log_file)
-    log_msg <- function(...) {
-        msg <- paste0(...)
-        message(msg)
-        write(
-            paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg),
-            file = log_file, append = TRUE
-        )
-    }
-    list(output_dir = output_dir, log_msg = log_msg)
+.gup_setup <- function(project_dir, export = TRUE) {
+    .kcs_setup_step(
+        project_dir, "008_taxa_intersections_across_samples",
+        "log_008_taxa_intersections_samples.txt",
+        export = export
+    )
 }
 
 #' Load presence data (sample x taxon) from the mosaic or a single CS.
@@ -143,51 +128,35 @@
     out[order(-out$N_Samples, out$Taxon), ]
 }
 
+#' Build the cross-sample UpSet object (does not draw it)
 #' @noRd
-.gup_plot <- function(binary, samples, group, dom, tax_level, path, log_msg) {
-    grDevices::pdf(
-        file = path, width = get_kariocas_dims()$width,
-        height = get_kariocas_dims()$height, onefile = FALSE
+.gup_build <- function(binary, samples, tax_level) {
+    UpSetR::upset(
+        binary,
+        sets = samples,
+        nsets = length(samples),
+        nintersects = 40,
+        order.by = "freq",
+        mainbar.y.label = paste(tax_level, "shared across samples"),
+        sets.x.label = paste("Total", tax_level, "per sample"),
+        main.bar.color = get_kariocas_colors("upset")$main,
+        sets.bar.color = get_kariocas_colors("upset")$sets,
+        matrix.color = "grey20", shade.color = "grey90"
     )
-    tryCatch(
-        {
-            show(
-                UpSetR::upset(
-                    binary,
-                    sets = samples,
-                    nsets = length(samples),
-                    nintersects = 40,
-                    order.by = "freq",
-                    mainbar.y.label = paste(tax_level, "shared across samples"),
-                    sets.x.label = paste("Total", tax_level, "per sample"),
-                    main.bar.color = get_kariocas_colors("upset")$main,
-                    sets.bar.color = get_kariocas_colors("upset")$sets,
-                    matrix.color = "grey20", shade.color = "grey90"
-                )
-            )
-            grid::grid.text(
-                label = paste(
-                    group, "-", dom, "|", tax_level,
-                    "core vs unique across samples"
-                ),
-                x = 0.5, y = 0.98,
-                gp = grid::gpar(fontsize = 14, fontface = "bold")
-            )
-            log_msg("    -> Generated: ", basename(path))
-        },
-        error = function(e) {
-            log_msg("    ERROR plotting ", basename(path), ": ", e$message)
-        }
-    )
-    grDevices::dev.off()
 }
 
 #' @noRd
-.gup_process_group <- function(df, group, DOMAINS, tax_level, label,
-                               output_dir, log_msg) {
-    grp_dir <- file.path(output_dir, group)
-    if (!dir.exists(grp_dir)) dir.create(grp_dir, recursive = TRUE)
+.gup_process_group <- function(df, group, DOMAINS, tax_level, label, setup) {
+    log_msg <- setup$log_msg
+    grp_dir <- if (isTRUE(setup$export)) {
+        file.path(setup$output_dir, group)
+    } else {
+        NULL
+    }
     membership <- list()
+    plots <- list()
+    paths <- character(0)
+    failed <- character(0)
     for (dom in DOMAINS) {
         df_gd <- dplyr::filter(df, .data$Group == group, .data$Domain == dom)
         binary <- .gup_binary(df_gd)
@@ -197,17 +166,43 @@
         }
         samples <- setdiff(colnames(binary), "Taxon_Name")
         base <- paste0(group, "_", dom, "_", tax_level, "_", label)
-        .gup_plot(
-            binary, samples, group, dom, tax_level,
-            file.path(grp_dir, paste0(base, "_SampleUpSet.pdf")), log_msg
-        )
         memb <- .gup_membership(binary, samples, group, dom, tax_level)
-        readr::write_tsv(
-            memb, file.path(grp_dir, paste0(base, "_membership.tsv"))
-        )
         membership[[dom]] <- memb
+        up <- tryCatch(
+            .gup_build(binary, samples, tax_level),
+            error = function(e) {
+                failed <<- c(failed, paste0(base, ": ", conditionMessage(e)))
+                NULL
+            }
+        )
+        if (!is.null(grp_dir)) {
+            if (!dir.exists(grp_dir)) dir.create(grp_dir, recursive = TRUE)
+            tsv <- file.path(grp_dir, paste0(base, "_membership.tsv"))
+            readr::write_tsv(memb, tsv)
+            paths <- c(paths, tsv)
+        }
+        if (is.null(up)) next
+        if (!is.null(grp_dir)) {
+            path <- .kcs_draw_upset_pdf(
+                up, file.path(grp_dir, paste0(base, "_SampleUpSet.pdf")),
+                paste(
+                    group, "-", dom, "|", tax_level,
+                    "core vs unique across samples"
+                ),
+                log_msg
+            )
+            if (!file.exists(path)) {
+                failed <- c(failed, paste0(base, ": ", attr(path, "error")))
+                next
+            }
+            paths <- c(paths, path)
+        }
+        plots[[base]] <- up
     }
-    dplyr::bind_rows(membership)
+    list(
+        data = dplyr::bind_rows(membership), plots = plots,
+        paths = paths, failed = failed
+    )
 }
 
 # ==============================================================================
@@ -234,10 +229,25 @@
 #' @param CS Confidence Score to analyse. \code{NULL} (default) uses the final
 #'   mosaic; a numeric value (Kraken fraction \code{0-1} or percentage
 #'   \code{0-100}) compares the imported data at that single CS.
+#' @param export Logical (default \code{TRUE}). When \code{TRUE}, an UpSet PDF
+#'   and a membership TSV per group and domain are written to
+#'   \code{<project_dir>/008_taxa_intersections_across_samples/<group>/},
+#'   together with a log. When \code{FALSE}, nothing is written and the
+#'   results are only returned.
 #'
-#' @return Invisibly returns a \code{data.frame} with the full membership table.
-#'   UpSet PDFs and membership TSVs are saved per group to
-#'   \code{<project_dir>/008_taxa_intersections_across_samples/}.
+#' @details
+#' Groups with a single sample cannot be compared and are skipped with a log
+#' message; if no group has at least two samples, the function warns that
+#' nothing was generated. \code{Category} is \code{"Core"} when a taxon is
+#' present in every sample of the group, \code{"Unique"} when it is present
+#' in exactly one, and \code{"Shared"} otherwise.
+#'
+#' @return A \code{\link{kariocas_result}} object. \code{$data} is the
+#'   membership table: one row per group, domain and taxon, with
+#'   \code{N_Samples}, \code{Category}, \code{Unique_Sample} and one 0/1
+#'   column per sample. \code{$plots} holds one \code{UpSetR} plot per group
+#'   and domain (printing an element draws it) and \code{$paths} lists the
+#'   files written when \code{export = TRUE}.
 #' @export
 #' @importFrom dplyr filter mutate distinct bind_rows left_join case_when
 #'   n_distinct
@@ -247,15 +257,30 @@
 #' @importFrom grDevices pdf dev.off
 #' @importFrom grid grid.text gpar
 #' @examples
-#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#' # The toy project has a single sample; add a second sample of the same
+#' # group (a copy of SAMPLE01 named SAMPLE02) so they can be compared.
+#' toy_project <- file.path(tempdir(), "toy_karioCaS_groups")
+#' in_dir <- file.path(toy_project, "000_mpa_original")
+#' dir.create(in_dir, recursive = TRUE, showWarnings = FALSE)
+#' src <- list.files(
+#'     system.file("extdata", "your_project_name", "000_mpa_original",
+#'         package = "karioCaS"
+#'     ),
+#'     full.names = TRUE
+#' )
+#' file.copy(src, in_dir)
+#' file.copy(src, file.path(in_dir, sub("SAMPLE01", "SAMPLE02", basename(src))))
+#' import_karioCaS(toy_project)
 #'
-#' # Core vs unique species across samples, from the final mosaic
-#' # group_upset(project_dir = toy_project)
+#' # Core vs unique genera across the samples of each group, at CS 40
+#' res <- group_upset(toy_project, tax_level = "Genus", CS = 40, export = FALSE)
+#' res
+#' table(res$data$Domain, res$data$Category)
 #'
-#' # Compare at a single Confidence Score instead
-#' # group_upset(project_dir = toy_project, CS = 40)
-group_upset <- function(project_dir, tax_level = "Species", CS = NULL) {
-    setup <- .gup_setup(project_dir)
+#' unlink(toy_project, recursive = TRUE)
+group_upset <- function(project_dir, tax_level = "Species", CS = NULL,
+                        export = TRUE) {
+    setup <- .gup_setup(project_dir, export)
     loaded <- .gup_load(project_dir, tax_level, CS, setup$log_msg)
     df <- loaded$df
     if (nrow(df) == 0) {
@@ -267,7 +292,7 @@ group_upset <- function(project_dir, tax_level = "Species", CS = NULL) {
         ">>> Cross-sample UpSet (", tax_level, " | ", loaded$label,
         ") for ", length(GROUPS), " group(s)."
     )
-    membership <- list()
+    results <- list()
     for (grp in GROUPS) {
         n_s <- dplyr::n_distinct(df$sample[df$Group == grp])
         setup$log_msg("  Group: ", grp, " (", n_s, " samples)")
@@ -275,11 +300,18 @@ group_upset <- function(project_dir, tax_level = "Species", CS = NULL) {
             setup$log_msg("    Skipping ", grp, ": needs >= 2 samples.")
             next
         }
-        membership[[grp]] <- .gup_process_group(
-            df, grp, DOMAINS, tax_level, loaded$label,
-            setup$output_dir, setup$log_msg
+        results[[grp]] <- .gup_process_group(
+            df, grp, DOMAINS, tax_level, loaded$label, setup
         )
     }
-    setup$log_msg("SUCCESS: Group UpSet analysis completed.")
-    invisible(dplyr::bind_rows(membership))
+    .kcs_warn_failed_plots(unlist(lapply(results, `[[`, "failed")), setup$log_msg)
+    plots <- do.call(c, unname(lapply(results, `[[`, "plots")))
+    .kcs_finish_step(
+        "008_taxa_intersections_across_samples",
+        dplyr::bind_rows(lapply(results, `[[`, "data")),
+        if (is.null(plots)) list() else plots,
+        unlist(lapply(results, `[[`, "paths")),
+        setup, setup$log_msg,
+        what = "group comparisons (each group needs at least 2 samples)"
+    )
 }

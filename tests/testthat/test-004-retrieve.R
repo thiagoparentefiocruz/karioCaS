@@ -32,7 +32,7 @@ test_that("retrieve_selected_taxa applies UX logic correctly", {
             CS_E = 40, # Override manual
             CS_V = 0 # Fallback num<U+00E9>rico
         ),
-        "SUCCESS: Process completed."
+        "SUCCESS: 004_final_mosaic completed"
     )
 
     # 5. Auditoria do Output Final
@@ -90,7 +90,7 @@ test_that("retrieve_selected_taxa pulls optimal min-reads from Reads_Audit", {
             CS_E = "auto", reads_min_E = "auto",
             CS_V = "auto", reads_min_V = "auto"
         ),
-        "SUCCESS: Process completed."
+        "SUCCESS: 004_final_mosaic completed"
     )
     out_dir <- file.path(temp_proj_dir, "004_final_mosaic")
     expect_true(file.exists(
@@ -121,4 +121,62 @@ test_that(".rst_resolve_reads resolves auto/secondary/manual correctly", {
     expect_equal(
         karioCaS:::.rst_resolve_reads("auto", "Viruses", "S1", 40, ra, noop)$val, 0
     )
+})
+
+.kcs_setup_retrieve_proj <- function() {
+    temp_proj_dir <- tempfile(pattern = "kariocas_test_ret2_")
+    dir.create(file.path(temp_proj_dir, "000_mpa_original"), recursive = TRUE)
+    file.copy(
+        list.files(
+            system.file("extdata/your_project_name/000_mpa_original",
+                package = "karioCaS"
+            ),
+            full.names = TRUE
+        ),
+        file.path(temp_proj_dir, "000_mpa_original")
+    )
+    suppressMessages(import_karioCaS(project_dir = temp_proj_dir))
+    temp_proj_dir
+}
+
+test_that("retrieve_selected_taxa stops when an 'auto' audit is missing", {
+    proj <- .kcs_setup_retrieve_proj()
+    # No taxa_retention() run -> no SI audit -> must not silently use CS 0
+    expect_error(
+        suppressMessages(retrieve_selected_taxa(proj, CS_B = "auto")),
+        "taxa_retention"
+    )
+    # No reads_per_taxa() run -> no reads audit
+    expect_error(
+        suppressMessages(retrieve_selected_taxa(
+            proj,
+            CS_A = 0, CS_B = 0, CS_E = 0, CS_V = 0, reads_min_B = "auto"
+        )),
+        "reads_per_taxa"
+    )
+    # Invalid manual values are rejected before any work is done
+    expect_error(retrieve_selected_taxa(proj, CS_B = "high"), "CS_B")
+    expect_error(retrieve_selected_taxa(proj, reads_min_E = -5), "reads_min_E")
+    unlink(proj, recursive = TRUE)
+})
+
+test_that("retrieve_selected_taxa with export = FALSE returns the mosaic", {
+    proj <- .kcs_setup_retrieve_proj()
+    res <- suppressMessages(retrieve_selected_taxa(
+        proj,
+        CS_A = 40, CS_B = 40, CS_E = 40, CS_V = 0,
+        reads_min_B = 5, export = FALSE
+    ))
+    expect_s3_class(res, "kariocas_result")
+    expect_false(dir.exists(file.path(proj, "004_final_mosaic")))
+    expect_length(res$paths, 0)
+    expect_true(all(c(
+        "sample", "Taxonomy", "Counts", "Domain", "CS", "CS_Source",
+        "Min_Reads", "Min_Reads_Source"
+    ) %in% colnames(res$data)))
+    bac <- res$data[res$data$Domain == "Bacteria", ]
+    expect_true(all(bac$CS == 40))
+    expect_true(all(bac$Counts >= 5))
+    expect_true(all(res$data$Counts > 0))
+    unlink(proj, recursive = TRUE)
 })

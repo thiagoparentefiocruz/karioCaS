@@ -4,32 +4,17 @@
 # ==============================================================================
 
 #' @noRd
-.hm_setup <- function(project_dir, analysis_rank, confidence_score) {
-    output_dir <- file.path(project_dir, "006_relative_abundance_across_CS")
-    log_dir <- file.path(project_dir, "logs")
-    if (!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
-    if (!dir.exists(log_dir)) dir.create(log_dir, recursive = TRUE)
-    log_file <- file.path(log_dir, "log_006_relative_abundance.txt")
-    header <- c(
-        "====================================================",
-        "LOG: 006_RELATIVE_ABUNDANCE",
-        paste0("PROJECT DIR: ", project_dir),
-        paste0(
+.hm_setup <- function(project_dir, analysis_rank, confidence_score,
+                      export = TRUE) {
+    .kcs_setup_step(
+        project_dir, "006_relative_abundance_across_CS",
+        "log_006_relative_abundance.txt",
+        export = export,
+        extra_header = paste0(
             "RANK: ", analysis_rank, " | TARGET CS: ",
             ifelse(is.null(confidence_score), "MAX", confidence_score)
-        ),
-        "===================================================="
-    )
-    writeLines(header, con = log_file)
-    log_msg <- function(...) {
-        msg <- paste0(...)
-        message(msg)
-        write(
-            paste0("[", format(Sys.time(), "%Y-%m-%d %H:%M:%S"), "] ", msg),
-            file = log_file, append = TRUE
         )
-    }
-    list(output_dir = output_dir, log_file = log_file, log_msg = log_msg)
+    )
 }
 
 #' @noRd
@@ -218,15 +203,28 @@
 
 #' @noRd
 .hm_process_sample <- function(df_proc, samp, DOMAINS, confidence_score, top_n,
-                               analysis_rank, output_dir, log_msg, barro_palette) {
+                               analysis_rank, setup, barro_palette) {
+    log_msg <- setup$log_msg
     log_msg("------------------------------------------------")
     log_msg("  Processing Sample: ", samp)
     df_samp <- dplyr::filter(df_proc, .data$sample == samp)
     max_cs <- .safe_max(df_samp$CS, default = 0)
-    target_cs <- if (!is.null(confidence_score) && confidence_score <= max_cs) {
-        confidence_score
+    if (is.null(confidence_score)) {
+        target_cs <- max_cs
+        log_msg(
+            "    Using the highest available CS (", sprintf("%02d", max_cs),
+            ") as target, since 'confidence_score' is NULL."
+        )
+    } else if (confidence_score > max_cs) {
+        target_cs <- max_cs
+        warning(
+            "Sample '", samp, "': requested confidence_score ", confidence_score,
+            " exceeds the highest available CS (", max_cs, "); using CS ",
+            max_cs, " instead.",
+            call. = FALSE
+        )
     } else {
-        max_cs
+        target_cs <- confidence_score
     }
     df_samp <- dplyr::filter(df_samp, .data$CS <= target_cs)
     all_cs <- sort(unique(df_samp$CS))
@@ -239,7 +237,7 @@
     full_plot_data <- dplyr::bind_rows(Filter(Negate(is.null), domain_results))
     if (nrow(full_plot_data) == 0) {
         log_msg("    No data to plot for this sample.")
-        return(invisible(NULL))
+        return(NULL)
     }
     full_plot_data <- full_plot_data |>
         dplyr::arrange(.data$Domain, .data$Order_Index) |>
@@ -254,12 +252,15 @@
         samp, "_Heatmap_", analysis_rank,
         "_CS", sprintf("%02d", target_cs), ".pdf"
     )
-    ggplot2::ggsave(
-        file.path(output_dir, file_name), p,
+    path <- .kcs_save_plot(
+        p, file_name, setup,
         width = get_kariocas_dims()$height,
         height = get_kariocas_dims()$width
     )
-    log_msg("    -> Generated: ", file_name)
+    list(
+        data = dplyr::mutate(full_plot_data, sample = samp, Target_CS = target_cs),
+        plot = p, path = path
+    )
 }
 
 # ==============================================================================
@@ -274,13 +275,22 @@
 #' zero survivors at the target CS (showing only loss groups).
 #'
 #' @param project_dir Path to the project root.
-#' @param analysis_rank Taxonomic rank to analyze. Defaults to \code{"Genus"}.
-#' @param confidence_score Target CS to define survivors (e.g., 90).
-#'   Defaults to the highest available CS.
+#' @param analysis_rank Taxonomic rank to analyze (default: \code{"Genus"}).
+#' @param confidence_score Target CS to define survivors, as a Kraken fraction
+#'   (\code{0-1}) or a percentage (\code{0-100}). \code{NULL} (default) uses
+#'   the highest CS available in each sample, and says so in the log. A value
+#'   above a sample's highest CS is replaced by that maximum with a warning.
 #' @param top_n Number of top survivors to display individually (default: 20).
+#' @param export Logical (default \code{TRUE}). When \code{TRUE}, one PDF per
+#'   sample and a log are written to
+#'   \code{<project_dir>/006_relative_abundance_across_CS/}. When \code{FALSE},
+#'   nothing is written and the heatmaps are only returned.
 #'
-#' @return Invisibly returns \code{NULL}. PDF plots are saved to
-#'   \code{<project_dir>/006_relative_abundance_across_CS/}.
+#' @return A \code{\link{kariocas_result}} object. \code{$data} holds the
+#'   plotted values (one row per sample, domain, taxon or loss group and CS,
+#'   with \code{Counts}, \code{Rel_Abund} and the \code{Target_CS} used),
+#'   \code{$plots} one \code{ggplot} heatmap per sample and \code{$paths} the
+#'   files written when \code{export = TRUE}.
 #' @export
 #' @importFrom dplyr filter mutate select group_by summarise arrange slice_head
 #'   pull ungroup left_join bind_rows distinct rename all_of desc
@@ -293,23 +303,35 @@
 #' @importFrom tibble column_to_rownames
 #' @importFrom SummarizedExperiment rowData
 #' @examples
-#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+#' # Copy the bundled toy project to a temporary folder and import it
+#' toy_project <- file.path(tempdir(), "toy_karioCaS")
+#' dir.create(toy_project, showWarnings = FALSE)
+#' file.copy(
+#'     system.file("extdata", "your_project_name", "000_mpa_original",
+#'         package = "karioCaS"
+#'     ),
+#'     toy_project, recursive = TRUE
+#' )
+#' import_karioCaS(toy_project)
 #'
-#' # Basic usage (defaults to Genus, highest CS, top 20 taxa)
-#' # heatmaps_karioCaS(project_dir = toy_project)
+#' # Species-level heatmap at CS 50, top 15 taxa, kept in memory
+#' res <- heatmaps_karioCaS(
+#'     toy_project,
+#'     analysis_rank = "Species", confidence_score = 50, top_n = 15,
+#'     export = FALSE
+#' )
+#' res
+#' res$plots[[1]]
 #'
-#' # Advanced: Species level at CS 50, top 30 taxa
-#' # heatmaps_karioCaS(
-#' #   project_dir      = toy_project,
-#' #   analysis_rank    = "Species",
-#' #   confidence_score = 50,
-#' #   top_n            = 30
-#' # )
+#' unlink(toy_project, recursive = TRUE)
 heatmaps_karioCaS <- function(project_dir,
-                              analysis_rank = NULL,
+                              analysis_rank = "Genus",
                               confidence_score = NULL,
-                              top_n = 20) {
-    if (is.null(analysis_rank)) analysis_rank <- "Genus"
+                              top_n = 20,
+                              export = TRUE) {
+    if (!is.character(analysis_rank) || length(analysis_rank) != 1) {
+        stop("'analysis_rank' must be a single rank name, e.g. \"Genus\".")
+    }
     if (!is.null(confidence_score)) {
         cs_pct <- .cs_arg_to_percent(confidence_score)
         if (is.na(cs_pct)) {
@@ -320,18 +342,28 @@ heatmaps_karioCaS <- function(project_dir,
         }
         confidence_score <- cs_pct
     }
-    setup <- .hm_setup(project_dir, analysis_rank, confidence_score)
+    setup <- .hm_setup(project_dir, analysis_rank, confidence_score, export)
     df_proc <- .hm_load_and_enrich(project_dir, analysis_rank)
     barro_pal <- c("#FFFFFF", "#FFEDA0", "#FEB24C", "#F03B20", "#800026")
     SAMPLES <- unique(df_proc$sample)
     DOMAINS <- names(get_kariocas_colors("domains"))
     setup$log_msg(">>> Starting Heatmap Analysis for ", length(SAMPLES), " samples.")
+    data <- list()
+    plots <- list()
+    paths <- character(0)
     for (samp in SAMPLES) {
-        .hm_process_sample(
+        out <- .hm_process_sample(
             df_proc, samp, DOMAINS, confidence_score, top_n,
-            analysis_rank, setup$output_dir, setup$log_msg, barro_pal
+            analysis_rank, setup, barro_pal
         )
+        if (is.null(out)) next
+        data[[samp]] <- out$data
+        plots[[paste0(samp, "_Heatmap_", analysis_rank)]] <- out$plot
+        paths <- c(paths, out$path)
     }
-    setup$log_msg("SUCCESS: Heatmap analysis completed.")
-    invisible(NULL)
+    .kcs_finish_step(
+        "006_relative_abundance_across_CS", dplyr::bind_rows(data), plots,
+        paths, setup, setup$log_msg,
+        what = "heatmaps"
+    )
 }
