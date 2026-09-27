@@ -36,7 +36,8 @@
             mdir
         }
         files <- list.files(
-            tsv_dir, pattern = "_karioCaS_Mosaic\\.tsv$", full.names = TRUE
+            tsv_dir,
+            pattern = "_karioCaS_Mosaic\\.tsv$", full.names = TRUE
         )
         if (length(files) == 0) {
             stop(

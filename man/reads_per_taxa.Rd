@@ -56,6 +56,22 @@ The optimal reads is computed \emph{per Confidence Score}, since the
 saturation curve changes with CS; read it off at your chosen optimal CS
 (Step 002).
 }
+\section{How the quantities are calculated}{
+
+For each sample, CS and domain, the taxa at \code{analysis_level} are
+counted at increasing minimum-read cutoffs (1, 2, 3, 4, 5, 7, 10, then
+1, 2, 3, 5 and 7 \eqn{\times 10^k} up to just past the largest count).
+\code{Taxa_Count} is the number of taxa with at least \code{Cutoff} reads,
+where a taxon's reads are the count of its own MPA row (which already
+includes reads classified to lower ranks). \code{Pct_Retained} is
+\code{Taxa_Count} as a percentage of the count at the lowest cutoff, and
+\code{Step_Loss_Pct} the loss since the previous cutoff. The optimal
+minimum reads (Primary SI) is the elbow of this curve, found with the same
+engine as in \code{\link{taxa_retention}} on a \eqn{\log_{10}} read axis;
+with \code{"kneedle"}, the more conservative post-cliff cutoff is reported
+as Secondary SI when it is larger.
+}
+
 \examples{
 # Copy the bundled toy project to a temporary folder and import it
 toy_project <- file.path(tempdir(), "toy_karioCaS")
@@ -64,7 +80,8 @@ file.copy(
     system.file("extdata", "your_project_name", "000_mpa_original",
         package = "karioCaS"
     ),
-    toy_project, recursive = TRUE
+    toy_project,
+    recursive = TRUE
 )
 import_karioCaS(toy_project)
 

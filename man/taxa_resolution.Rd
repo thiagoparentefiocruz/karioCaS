@@ -51,6 +51,18 @@ By default the analysis runs on the \strong{final mosaic} produced by
 data-driven high-confidence selection - one figure per sample. Alternatively,
 set \code{CS} to analyse the raw imported data at a single Confidence Score.
 }
+\section{How the quantities are calculated}{
+
+MPA counts are cumulative, so a parent row (e.g. a genus) already includes
+the reads of its children (its species). For the \code{top_n} parent taxa
+with most reads in each domain: \code{Parent_Cumulative_Total} is the count
+of the parent's own row; \code{Child_Sum_Resolved} is the sum of its
+children's rows at \code{child_level}, i.e. the reads resolved down to the
+child rank; \code{Parent_Exclusive} is
+\code{Parent_Cumulative_Total - Child_Sum_Resolved} (floored at 0), the
+reads classified to the parent but not resolved to the child rank.
+}
+
 \examples{
 # Copy the bundled toy project to a temporary folder and import it
 toy_project <- file.path(tempdir(), "toy_karioCaS")
@@ -59,7 +71,8 @@ file.copy(
     system.file("extdata", "your_project_name", "000_mpa_original",
         package = "karioCaS"
     ),
-    toy_project, recursive = TRUE
+    toy_project,
+    recursive = TRUE
 )
 import_karioCaS(toy_project)
 

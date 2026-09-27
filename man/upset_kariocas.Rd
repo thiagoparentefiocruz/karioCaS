@@ -41,7 +41,8 @@ file.copy(
     system.file("extdata", "your_project_name", "000_mpa_original",
         package = "karioCaS"
     ),
-    toy_project, recursive = TRUE
+    toy_project,
+    recursive = TRUE
 )
 import_karioCaS(toy_project)
 

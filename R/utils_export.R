@@ -194,13 +194,21 @@ print.kariocas_result <- function(x, ...) {
     cat("<kariocas_result> step: ", x$step, "\n", sep = "")
     cat("  data  : ", n_rows, " row(s)",
         if (n_rows > 0) paste0(" x ", ncol(x$data), " column(s)") else "",
-        "\n", sep = "")
+        "\n",
+        sep = ""
+    )
     cat("  plots : ", length(x$plots),
         if (length(x$plots) > 0) {
-            paste0(" [", paste(utils::head(names(x$plots), 3), collapse = ", "),
-                   if (length(x$plots) > 3) ", ..." else "", "]")
-        } else "",
-        "\n", sep = "")
+            paste0(
+                " [", paste(utils::head(names(x$plots), 3), collapse = ", "),
+                if (length(x$plots) > 3) ", ..." else "", "]"
+            )
+        } else {
+            ""
+        },
+        "\n",
+        sep = ""
+    )
     if (is.null(x$output_dir)) {
         cat("  export: none (export = FALSE)\n")
     } else {

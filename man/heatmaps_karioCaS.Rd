@@ -42,6 +42,21 @@ Confidence Score. "Elite" survivors are clustered by similarity, while lost
 taxa are aggregated into "Loss Groups" at the bottom. Handles domains with
 zero survivors at the target CS (showing only loss groups).
 }
+\section{How the quantities are calculated}{
+
+For each sample and domain, a taxon's reads at \code{analysis_rank} are
+the count of its own MPA row, which already includes the reads classified
+to lower ranks. The \code{top_n} taxa with most reads at the target CS are
+shown individually. The remaining taxa are aggregated: taxa present at a CS
+below the target but absent at the next CS form a row
+\emph{"Recovered only in CSxx"}; taxa still present at the target CS but not
+among the \code{top_n} form a row \emph{"Lowest abundance ... in CSxx"}.
+\code{Rel_Abund} is the reads of a row divided by the total reads of all
+taxa of that domain at \code{analysis_rank} at the same CS, times 100.
+Individual taxa are ordered by hierarchical clustering (Euclidean distance,
+complete linkage) of their relative-abundance profiles across CS.
+}
+
 \examples{
 # Copy the bundled toy project to a temporary folder and import it
 toy_project <- file.path(tempdir(), "toy_karioCaS")
@@ -50,7 +65,8 @@ file.copy(
     system.file("extdata", "your_project_name", "000_mpa_original",
         package = "karioCaS"
     ),
-    toy_project, recursive = TRUE
+    toy_project,
+    recursive = TRUE
 )
 import_karioCaS(toy_project)
 
