@@ -14,7 +14,8 @@ retrieve_selected_taxa(
   CS_E = "auto",
   reads_min_E = 0,
   CS_V = "auto",
-  reads_min_V = 0
+  reads_min_V = 0,
+  export = TRUE
 )
 }
 \arguments{
@@ -44,11 +45,21 @@ Default: 0.}
 \item{CS_V}{Character or numeric. CS for Viruses. Default: \code{"auto"}.}
 
 \item{reads_min_V}{Minimum reads for Viruses. Default: 0.}
+
+\item{export}{Logical (default \code{TRUE}). When \code{TRUE}, one mosaic
+per sample is written to \code{<project_dir>/004_final_mosaic/}
+(\code{.mpa} files under \code{mpa/}, \code{.tsv} files under
+\code{tsv/}) together with a log. When \code{FALSE}, nothing is written
+and the mosaic is only returned; note that \code{\link{taxa_resolution}}
+and \code{\link{group_upset}} read the exported mosaic by default.}
 }
 \value{
-Invisibly returns \code{TRUE}. Mosaic files are saved to
-  \code{<project_dir>/004_final_mosaic/}, with \code{.mpa} files under
-  \code{mpa/} and \code{.tsv} files under \code{tsv/}.
+A \code{\link{kariocas_result}} object. \code{$data} is the mosaic
+  in long format: one row per sample and taxon, with the read
+  \code{Counts} at the selected CS, the \code{Domain}, the \code{CS} and
+  \code{Min_Reads} applied, and where each threshold came from
+  (\code{CS_Source}, \code{Min_Reads_Source}). \code{$plots} is empty and
+  \code{$paths} lists the files written when \code{export = TRUE}.
 }
 \description{
 Creates a "biological mosaic" for each sample using the
@@ -63,16 +74,42 @@ thresholds automatically. The mosaic always retains \strong{all} taxonomic
 ranks present in the input (as an MPA profile does); enforces a strict
 \code{> 0} read filter.
 }
+\details{
+\code{"auto"} and \code{"secondary"} read the audit files exported by
+\code{\link{taxa_retention}} and \code{\link{reads_per_taxa}}; if the
+required file is missing the function stops with an explanation rather
+than silently applying no threshold. When the audit exists but has no
+optimal value for a given sample and domain (typically a domain with too
+few taxa to fit a curve), CS 0 or 0 minimum reads is used for that domain
+and a single warning lists every such case.
+}
 \examples{
-toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+# Copy the bundled toy project to a temporary folder and import it
+toy_project <- file.path(tempdir(), "toy_karioCaS")
+dir.create(toy_project, showWarnings = FALSE)
+file.copy(
+    system.file("extdata", "your_project_name", "000_mpa_original",
+        package = "karioCaS"
+    ),
+    toy_project, recursive = TRUE
+)
+import_karioCaS(toy_project)
 
-# Fully data-driven mosaic: optimal CS and optimal min-reads per domain
-# retrieve_selected_taxa(
-#   project_dir = toy_project,
-#   tax_level   = "Species",
-#   CS_B        = "auto", reads_min_B = "auto",
-#   CS_A        = "auto", reads_min_A = "auto",
-#   CS_E        = 40,     reads_min_E = 10,
-#   CS_V        = 0,      reads_min_V = 0
-# )
+# "auto" thresholds come from the exported audits of the previous steps
+taxa_retention(toy_project)
+reads_per_taxa(toy_project)
+
+# Data-driven CS and minimum reads for Bacteria and Archaea,
+# manual thresholds for Eukaryota and Viruses
+mosaic <- retrieve_selected_taxa(
+    toy_project,
+    CS_B = "auto", reads_min_B = "auto",
+    CS_A = "auto", reads_min_A = "auto",
+    CS_E = 40, reads_min_E = 10,
+    CS_V = 0, reads_min_V = 0
+)
+mosaic
+unique(mosaic$data[, c("Domain", "CS", "CS_Source", "Min_Reads")])
+
+unlink(toy_project, recursive = TRUE)
 }

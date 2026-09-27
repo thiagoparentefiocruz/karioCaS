@@ -148,3 +148,9 @@ group_upset(
   # CS        = NULL        # NULL = final mosaic | a number = a single CS
 )
 ```
+
+Every analysis function returns a `kariocas_result` object (`$data`, `$plots`, `$paths`). By default (`export = TRUE`) results are also written to the project folder; use `export = FALSE` to keep everything in memory while exploring. `retrieve_selected_taxa()` with `"auto"` thresholds reads the audits *exported* by `taxa_retention()` and `reads_per_taxa()`.
+
+## Acknowledgement of AI assistance
+
+The scientific concept, the method design and its validation are the author's. The package code was written with the assistance of large language models, which also contributed to the formulation of some of the calculations. All code was reviewed and tested by the author.

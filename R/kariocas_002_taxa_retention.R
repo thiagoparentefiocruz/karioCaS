@@ -40,10 +40,15 @@
             dplyr::group_by(.data$Domain, .data$CS) |>
             dplyr::summarise(Global_Reads = max(.data$Counts), .groups = "drop")
     }
+    # Rank_Reads: reads classified to the rank, i.e. the sum of the rank's own
+    # MPA rows (already cumulative), never adding their descendants again.
     stats_df <- df_samp |>
+        dplyr::mutate(
+            Own_Row = .data$Lowest_Rank == as.character(.data$Rank)
+        ) |>
         dplyr::group_by(.data$Domain, .data$Rank, .data$CS) |>
         dplyr::summarise(
-            Rank_Reads = sum(.data$Counts),
+            Rank_Reads = sum(.data$Counts[.data$Own_Row]),
             Rank_Taxa  = dplyr::n_distinct(.data$Taxon_Name),
             .groups    = "drop"
         ) |>
@@ -240,7 +245,7 @@
     paths <- character(0)
     for (r in names(rank_map)) {
         leg_taxa <- r
-        leg_reads <- paste0(r, "-exclusive Reads")
+        leg_reads <- paste0("Reads classified to ", r)
         leg_total <- "Total Reads"
         plots <- stats::setNames(
             lapply(DOMAINS, function(d) {

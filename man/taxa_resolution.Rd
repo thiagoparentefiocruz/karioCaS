@@ -9,7 +9,8 @@ taxa_resolution(
   parent_level = "Genus",
   child_level = "Species",
   CS = NULL,
-  top_n = 10
+  top_n = 10,
+  export = TRUE
 )
 }
 \arguments{
@@ -25,10 +26,18 @@ fraction \code{0-1} or percentage \code{0-100}) analyses the imported data
 at that single CS instead of every CS.}
 
 \item{top_n}{Number of top taxa to display per domain (default: 10).}
+
+\item{export}{Logical (default \code{TRUE}). When \code{TRUE}, one PDF per
+sample and a log are written to \code{<project_dir>/007_taxa_resolution/}.
+When \code{FALSE}, nothing is written and the results are only returned.}
 }
 \value{
-Invisibly returns \code{NULL}. PDF plots are saved to
-  \code{<project_dir>/007_taxa_resolution/}.
+A \code{\link{kariocas_result}} object. \code{$data} holds, for
+  each sample, domain and top parent taxon, the parent's cumulative reads
+  (\code{Parent_Cumulative_Total}), the reads resolved to the child rank
+  (\code{Child_Sum_Resolved}) and the parent-exclusive reads
+  (\code{Parent_Exclusive}); \code{$plots} one \code{patchwork} figure per
+  sample; \code{$paths} the files written when \code{export = TRUE}.
 }
 \description{
 Creates stacked bar plots showing resolution efficiency between a Parent Rank
@@ -43,11 +52,22 @@ data-driven high-confidence selection - one figure per sample. Alternatively,
 set \code{CS} to analyse the raw imported data at a single Confidence Score.
 }
 \examples{
-toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+# Copy the bundled toy project to a temporary folder and import it
+toy_project <- file.path(tempdir(), "toy_karioCaS")
+dir.create(toy_project, showWarnings = FALSE)
+file.copy(
+    system.file("extdata", "your_project_name", "000_mpa_original",
+        package = "karioCaS"
+    ),
+    toy_project, recursive = TRUE
+)
+import_karioCaS(toy_project)
 
-# Default: resolution of the final mosaic (Genus vs Species, top 10)
-# taxa_resolution(project_dir = toy_project)
+# Genus vs Species resolution of the imported data at CS 40, in memory
+res <- taxa_resolution(toy_project, CS = 40, export = FALSE)
+res
+head(res$data)
+res$plots[[1]]
 
-# Analyse the imported data at a single Confidence Score
-# taxa_resolution(project_dir = toy_project, CS = 40)
+unlink(toy_project, recursive = TRUE)
 }

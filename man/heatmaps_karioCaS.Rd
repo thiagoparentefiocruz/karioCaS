@@ -6,24 +6,35 @@
 \usage{
 heatmaps_karioCaS(
   project_dir,
-  analysis_rank = NULL,
+  analysis_rank = "Genus",
   confidence_score = NULL,
-  top_n = 20
+  top_n = 20,
+  export = TRUE
 )
 }
 \arguments{
 \item{project_dir}{Path to the project root.}
 
-\item{analysis_rank}{Taxonomic rank to analyze. Defaults to \code{"Genus"}.}
+\item{analysis_rank}{Taxonomic rank to analyze (default: \code{"Genus"}).}
 
-\item{confidence_score}{Target CS to define survivors (e.g., 90).
-Defaults to the highest available CS.}
+\item{confidence_score}{Target CS to define survivors, as a Kraken fraction
+(\code{0-1}) or a percentage (\code{0-100}). \code{NULL} (default) uses
+the highest CS available in each sample, and says so in the log. A value
+above a sample's highest CS is replaced by that maximum with a warning.}
 
 \item{top_n}{Number of top survivors to display individually (default: 20).}
+
+\item{export}{Logical (default \code{TRUE}). When \code{TRUE}, one PDF per
+sample and a log are written to
+\code{<project_dir>/006_relative_abundance_across_CS/}. When \code{FALSE},
+nothing is written and the heatmaps are only returned.}
 }
 \value{
-Invisibly returns \code{NULL}. PDF plots are saved to
-  \code{<project_dir>/006_relative_abundance_across_CS/}.
+A \code{\link{kariocas_result}} object. \code{$data} holds the
+  plotted values (one row per sample, domain, taxon or loss group and CS,
+  with \code{Counts}, \code{Rel_Abund} and the \code{Target_CS} used),
+  \code{$plots} one \code{ggplot} heatmap per sample and \code{$paths} the
+  files written when \code{export = TRUE}.
 }
 \description{
 Creates Relative Abundance (%) heatmaps focused on survivors at a specific
@@ -32,16 +43,25 @@ taxa are aggregated into "Loss Groups" at the bottom. Handles domains with
 zero survivors at the target CS (showing only loss groups).
 }
 \examples{
-toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+# Copy the bundled toy project to a temporary folder and import it
+toy_project <- file.path(tempdir(), "toy_karioCaS")
+dir.create(toy_project, showWarnings = FALSE)
+file.copy(
+    system.file("extdata", "your_project_name", "000_mpa_original",
+        package = "karioCaS"
+    ),
+    toy_project, recursive = TRUE
+)
+import_karioCaS(toy_project)
 
-# Basic usage (defaults to Genus, highest CS, top 20 taxa)
-# heatmaps_karioCaS(project_dir = toy_project)
+# Species-level heatmap at CS 50, top 15 taxa, kept in memory
+res <- heatmaps_karioCaS(
+    toy_project,
+    analysis_rank = "Species", confidence_score = 50, top_n = 15,
+    export = FALSE
+)
+res
+res$plots[[1]]
 
-# Advanced: Species level at CS 50, top 30 taxa
-# heatmaps_karioCaS(
-#   project_dir      = toy_project,
-#   analysis_rank    = "Species",
-#   confidence_score = 50,
-#   top_n            = 30
-# )
+unlink(toy_project, recursive = TRUE)
 }

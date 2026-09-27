@@ -92,3 +92,34 @@ test_that("reads_per_taxa with export = FALSE keeps everything in memory", {
     expect_length(res$paths, 0)
     unlink(temp_proj_dir, recursive = TRUE)
 })
+
+test_that("reads_per_taxa above species counts each taxon once", {
+    temp_proj_dir <- tempfile(pattern = "kariocas_test_reads_genus_")
+    dir.create(file.path(temp_proj_dir, "000_mpa_original"), recursive = TRUE)
+    src <- system.file(
+        "extdata/your_project_name/000_mpa_original",
+        package = "karioCaS"
+    )
+    file.copy(
+        list.files(src, full.names = TRUE),
+        file.path(temp_proj_dir, "000_mpa_original")
+    )
+    suppressMessages(import_karioCaS(project_dir = temp_proj_dir))
+    res <- suppressMessages(
+        reads_per_taxa(temp_proj_dir, analysis_level = "Genus", export = FALSE)
+    )
+    # At a cutoff of 1 read, the taxa count is the number of genus rows
+    mpa <- utils::read.delim(
+        file.path(src, "SAMPLE01_CS04.mpa"),
+        header = FALSE, quote = "", comment.char = "",
+        stringsAsFactors = FALSE
+    )
+    n_bact_genera <- sum(
+        grepl("^d__Bacteria\\|.*\\|g__[^|]+$", mpa$V1) & mpa$V2 >= 1
+    )
+    row1 <- res$data[res$data$CS == 40 & res$data$Domain == "Bacteria" &
+        res$data$Cutoff == 1, ]
+    expect_equal(nrow(row1), 1)
+    expect_equal(row1$Taxa_Count, n_bact_genera)
+    unlink(temp_proj_dir, recursive = TRUE)
+})

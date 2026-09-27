@@ -44,8 +44,14 @@
     if (!analysis_rank %in% colnames(df_long)) {
         stop("Rank '", analysis_rank, "' not found after enrichment.")
     }
+    # MPA counts are cumulative: a genus row already includes the reads of its
+    # species. Keep only each taxon's own row (Lowest_Rank == rank) so reads
+    # classified below the rank are not summed a second time.
     df_long |>
-        dplyr::filter(.data$Rank == analysis_rank) |>
+        dplyr::filter(
+            .data$Rank == analysis_rank,
+            .data$Lowest_Rank == analysis_rank
+        ) |>
         dplyr::mutate(Taxon_Name = .data[[analysis_rank]]) |>
         dplyr::filter(!is.na(.data$Taxon_Name))
 }

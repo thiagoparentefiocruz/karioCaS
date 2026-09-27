@@ -198,7 +198,21 @@
 #' @param project_dir Path to the project root. Must contain a
 #'   \code{000_mpa_original} subfolder with \code{.mpa} files.
 #'
-#' @return Invisibly returns a \code{TreeSummarizedExperiment} object.
+#' @details
+#' Each report becomes one column of the count matrix, named
+#' \code{SAMPLE_CSxx}; the sample name and the CS (as an integer percentage,
+#' e.g. \code{CS09} = 90) are stored in \code{colData()}. Each distinct
+#' taxonomic path becomes one row: taxa absent from a report get a count of 0
+#' in that column, and identical paths within a report are summed. The lineage
+#' is split into eight rank columns (Domain to Species) in \code{rowData()},
+#' together with \code{Rank}, the lowest rank present in the path. No
+#' normalisation or transformation is applied; counts are the read counts of
+#' the reports, which in MPA format are cumulative (a genus count includes the
+#' reads of its species). The object and a tab-separated copy of the matrix are
+#' saved to \code{<project_dir>/001_imported_matrix/}, where the other steps
+#' read it from.
+#'
+#' @return Invisibly returns the \code{TreeSummarizedExperiment} object.
 #' @export
 #' @importFrom utils read.table
 #' @importFrom dplyr bind_rows mutate select distinct left_join case_when
@@ -209,8 +223,20 @@
 #' @importFrom S4Vectors DataFrame
 #' @importFrom readr write_tsv
 #' @examples
-#' toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
-#' import_karioCaS(project_dir = toy_project)
+#' # Copy the bundled toy reports to a temporary project folder
+#' toy_project <- file.path(tempdir(), "toy_karioCaS_import")
+#' dir.create(toy_project, showWarnings = FALSE)
+#' file.copy(
+#'     system.file("extdata", "your_project_name", "000_mpa_original",
+#'         package = "karioCaS"
+#'     ),
+#'     toy_project, recursive = TRUE
+#' )
+#' tse <- import_karioCaS(toy_project)
+#' tse
+#' SummarizedExperiment::colData(tse)
+#'
+#' unlink(toy_project, recursive = TRUE)
 import_karioCaS <- function(project_dir) {
     setup <- .imp_setup(project_dir)
     df_big <- .imp_read_files(setup$input_dir, setup$log_msg)

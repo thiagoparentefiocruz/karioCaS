@@ -356,7 +356,11 @@ reads_per_taxa <- function(project_dir,
     setup <- .rpt_setup(project_dir, analysis_level, method, export)
     setup$log_msg(">>> Loading Data (Auto-detected format)...")
     df_long <- .get_tidy_data(project_dir)
-    df_proc <- dplyr::filter(df_long, .data$Rank == analysis_level)
+    # One row per taxon: its own (cumulative) MPA row, not its descendants'.
+    df_proc <- dplyr::filter(
+        df_long,
+        .data$Rank == analysis_level, .data$Lowest_Rank == analysis_level
+    )
     if (nrow(df_proc) == 0) {
         setup$log_msg("CRITICAL ERROR: No data found for Rank: ", analysis_level)
         stop("No data for specified rank.")

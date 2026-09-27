@@ -79,3 +79,54 @@ test_that("heatmaps_karioCaS is explicit about the target CS it uses", {
     expect_error(heatmaps_karioCaS(proj, analysis_rank = NULL), "analysis_rank")
     unlink(proj, recursive = TRUE)
 })
+
+# MPA counts are cumulative (a genus row already includes its species' reads).
+# Genus-level values must equal the genus's own MPA row, not genus + species.
+.kcs_genus_rows <- function(cs_code) {
+    f <- system.file(
+        "extdata", "your_project_name", "000_mpa_original",
+        paste0("SAMPLE01_CS", cs_code, ".mpa"),
+        package = "karioCaS"
+    )
+    mpa <- utils::read.delim(
+        f,
+        header = FALSE, quote = "", comment.char = "",
+        col.names = c("Taxonomy", "Counts"), stringsAsFactors = FALSE
+    )
+    g <- mpa[grepl("\\|g__[^|]+$", mpa$Taxonomy), ]
+    data.frame(
+        Domain = sub("^d__([^|]+).*", "\\1", g$Taxonomy),
+        Genus = sub(".*\\|g__", "", g$Taxonomy),
+        Counts = g$Counts,
+        stringsAsFactors = FALSE
+    )
+}
+
+test_that("genus heatmap counts equal the genus MPA rows (no double counting)", {
+    proj <- .kcs_setup_heatmap_proj()
+    res <- suppressMessages(heatmaps_karioCaS(
+        proj,
+        analysis_rank = "Genus", confidence_score = 40, top_n = 10000,
+        export = FALSE
+    ))
+    got <- res$data[res$data$CS == 40 & res$data$Counts > 0 &
+        !grepl("Recovered only in|Lowest abundance", res$data$Taxon_Name), ]
+    # Sum homonymous genera (same name under different lineages), as the
+    # heatmap groups by name within a domain.
+    expected <- stats::aggregate(
+        Counts ~ Domain + Genus,
+        data = .kcs_genus_rows("04"), FUN = sum
+    )
+    m <- merge(
+        data.frame(
+            Domain = got$Domain, Genus = as.character(got$Taxon_Name),
+            Got = got$Counts
+        ),
+        expected,
+        by = c("Domain", "Genus")
+    )
+    expect_true(nrow(m) > 0)
+    expect_equal(nrow(m), nrow(got))
+    expect_equal(m$Got, m$Counts)
+    unlink(proj, recursive = TRUE)
+})

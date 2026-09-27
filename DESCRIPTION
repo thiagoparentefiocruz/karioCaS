@@ -20,7 +20,7 @@ License: GPL (>= 3)
 Depends:
     R (>= 4.5.0)
 Encoding: UTF-8
-RoxygenNote: 7.3.3
+RoxygenNote: 8.1.0
 Imports: 
     ggplot2,
     patchwork,
@@ -43,6 +43,7 @@ Imports:
     stats,
     utils
 Suggests: 
+    BiocStyle,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)

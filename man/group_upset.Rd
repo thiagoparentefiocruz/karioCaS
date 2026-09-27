@@ -4,7 +4,7 @@
 \alias{group_upset}
 \title{Cross-Sample UpSet: Core vs Unique Taxa per Biological Group (Step 008)}
 \usage{
-group_upset(project_dir, tax_level = "Species", CS = NULL)
+group_upset(project_dir, tax_level = "Species", CS = NULL, export = TRUE)
 }
 \arguments{
 \item{project_dir}{Path to the project root.}
@@ -14,11 +14,20 @@ group_upset(project_dir, tax_level = "Species", CS = NULL)
 \item{CS}{Confidence Score to analyse. \code{NULL} (default) uses the final
 mosaic; a numeric value (Kraken fraction \code{0-1} or percentage
 \code{0-100}) compares the imported data at that single CS.}
+
+\item{export}{Logical (default \code{TRUE}). When \code{TRUE}, an UpSet PDF
+and a membership TSV per group and domain are written to
+\code{<project_dir>/008_taxa_intersections_across_samples/<group>/},
+together with a log. When \code{FALSE}, nothing is written and the
+results are only returned.}
 }
 \value{
-Invisibly returns a \code{data.frame} with the full membership table.
-  UpSet PDFs and membership TSVs are saved per group to
-  \code{<project_dir>/008_taxa_intersections_across_samples/}.
+A \code{\link{kariocas_result}} object. \code{$data} is the
+  membership table: one row per group, domain and taxon, with
+  \code{N_Samples}, \code{Category}, \code{Unique_Sample} and one 0/1
+  column per sample. \code{$plots} holds one \code{UpSetR} plot per group
+  and domain (printing an element draws it) and \code{$paths} lists the
+  files written when \code{export = TRUE}.
 }
 \description{
 For each biological group (inferred from sample names by stripping trailing
@@ -34,13 +43,34 @@ Core/Shared/Unique \code{Category}) is written alongside each plot.
 By default the analysis uses the \strong{final mosaic} from
 \code{retrieve_selected_taxa()}; set \code{CS} to compare at a single
 Confidence Score from the imported data instead.
+
+
+Groups with a single sample cannot be compared and are skipped with a log
+message; if no group has at least two samples, the function warns that
+nothing was generated. \code{Category} is \code{"Core"} when a taxon is
+present in every sample of the group, \code{"Unique"} when it is present
+in exactly one, and \code{"Shared"} otherwise.
 }
 \examples{
-toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+# The toy project has a single sample; add a second sample of the same
+# group (a copy of SAMPLE01 named SAMPLE02) so they can be compared.
+toy_project <- file.path(tempdir(), "toy_karioCaS_groups")
+in_dir <- file.path(toy_project, "000_mpa_original")
+dir.create(in_dir, recursive = TRUE, showWarnings = FALSE)
+src <- list.files(
+    system.file("extdata", "your_project_name", "000_mpa_original",
+        package = "karioCaS"
+    ),
+    full.names = TRUE
+)
+file.copy(src, in_dir)
+file.copy(src, file.path(in_dir, sub("SAMPLE01", "SAMPLE02", basename(src))))
+import_karioCaS(toy_project)
 
-# Core vs unique species across samples, from the final mosaic
-# group_upset(project_dir = toy_project)
+# Core vs unique genera across the samples of each group, at CS 40
+res <- group_upset(toy_project, tax_level = "Genus", CS = 40, export = FALSE)
+res
+table(res$data$Domain, res$data$Category)
 
-# Compare at a single Confidence Score instead
-# group_upset(project_dir = toy_project, CS = 40)
+unlink(toy_project, recursive = TRUE)
 }

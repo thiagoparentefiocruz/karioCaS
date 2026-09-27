@@ -4,16 +4,29 @@
 \alias{upset_kariocas}
 \title{Generate UpSet Plots per Sample and Domain (Step 005)}
 \usage{
-upset_kariocas(project_dir, tax_level = "Species")
+upset_kariocas(project_dir, tax_level = "Species", export = TRUE)
 }
 \arguments{
 \item{project_dir}{Path to the project root.}
 
 \item{tax_level}{Taxonomic rank to analyze (default: \code{"Species"}).}
+
+\item{export}{Logical (default \code{TRUE}). When \code{TRUE}, one PDF per
+sample and domain is written to a per-sample subfolder of
+\code{<project_dir>/005_taxa_intersections_across_CS/}, together with a
+log. When \code{FALSE}, nothing is written and the UpSet plots are only
+returned.}
 }
 \value{
-Invisibly returns \code{NULL}. PDF plots are saved to
-  \code{<project_dir>/005_taxa_intersections_across_CS/}.
+A \code{\link{kariocas_result}} object. \code{$data} is the
+  presence/absence table behind the plots: one row per sample, domain and
+  taxon, one \code{CSxx} column per Confidence Score (1 = detected with
+  at least one read at that CS) and \code{N_CS}, the number of CS levels
+  at which the taxon is detected. \code{$plots} holds one \code{UpSetR}
+  plot per sample and domain; printing an element draws it on the current
+  device. \code{$paths} lists the PDFs written when \code{export = TRUE}.
+  If a plot cannot be drawn, a warning names it and it is not counted as a
+  success.
 }
 \description{
 "karioCaS never are upset!" Generates UpSet plots showing taxon persistence
@@ -21,8 +34,22 @@ across Confidence Score levels, for a single taxonomic rank, with detailed
 logging. One plot per sample and domain is written to a per-sample subfolder.
 }
 \examples{
-toy_project <- system.file("extdata", "your_project_name", package = "karioCaS")
+# Copy the bundled toy project to a temporary folder and import it
+toy_project <- file.path(tempdir(), "toy_karioCaS")
+dir.create(toy_project, showWarnings = FALSE)
+file.copy(
+    system.file("extdata", "your_project_name", "000_mpa_original",
+        package = "karioCaS"
+    ),
+    toy_project, recursive = TRUE
+)
+import_karioCaS(toy_project)
 
-# upset_kariocas(project_dir = toy_project)
-# upset_kariocas(project_dir = toy_project, tax_level = "Genus")
+# Genus persistence across Confidence Scores, kept in memory
+res <- upset_kariocas(toy_project, tax_level = "Genus", export = FALSE)
+res
+head(res$data)
+res$plots[["SAMPLE01_Bacteria_Genus"]]
+
+unlink(toy_project, recursive = TRUE)
 }
