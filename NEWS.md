@@ -34,6 +34,8 @@ Changes in response to the first Bioconductor review.
 * `heatmaps_karioCaS()`: `analysis_rank = "Genus"` is now the visible default;
   the CS used when `confidence_score = NULL` is reported, and a requested CS
   above a sample's maximum triggers a warning.
+* `reads_per_taxa(method = "segmented")` no longer fails with
+  "invalid format '%02d'" (found by the new tests).
 * Removed redundant `requireNamespace("UpSetR")` checks.
 
 ## Documentation

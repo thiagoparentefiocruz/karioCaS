@@ -109,12 +109,13 @@ NULL
     } else {
         primary_cs <- calc_df$CS[min(2, n_pts)]
     }
-    log_msg(sprintf("    %s -> Regime Shift: CS %02d", dom, primary_cs))
+    # %02g, not %02d: reads_per_taxa() passes log10 read cutoffs (non-integer)
+    log_msg(sprintf("    %s -> Regime Shift: CS %02g", dom, primary_cs))
     list(
         primary_cs = primary_cs,
         sec1_cs = NA,
         sub_txt = sprintf(
-            "Method: Segmented | Shift Breakpoint: CS %02d", primary_cs
+            "Method: Segmented | Shift Breakpoint: CS %02g", primary_cs
         )
     )
 }
