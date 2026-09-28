@@ -46,10 +46,14 @@ test_that("taxa_resolution default reads the final mosaic", {
     proj <- .kcs_setup_resolution_proj()
     # Mosaic with all ranks so the parent rank is present.
     suppressMessages(taxa_retention(project_dir = proj, tax_level = "Species"))
-    suppressMessages(retrieve_selected_taxa(
-        project_dir = proj, tax_level = NULL,
-        CS_A = "auto", CS_B = "auto", CS_E = "auto", CS_V = "auto"
-    ))
+    # Viruses has no SI in the example data -> reported fallback to CS 0
+    expect_warning(
+        suppressMessages(retrieve_selected_taxa(
+            project_dir = proj, tax_level = NULL,
+            CS_A = "auto", CS_B = "auto", CS_E = "auto", CS_V = "auto"
+        )),
+        "Viruses: no auto CS"
+    )
 
     expect_message(
         taxa_resolution(project_dir = proj),

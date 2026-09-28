@@ -81,16 +81,21 @@ test_that("retrieve_selected_taxa pulls optimal min-reads from Reads_Audit", {
     suppressMessages(taxa_retention(project_dir = temp_proj_dir, tax_level = "Species"))
     suppressMessages(reads_per_taxa(project_dir = temp_proj_dir, analysis_level = "Species"))
 
-    # Fully data-driven: auto CS + auto reads for every domain
-    expect_message(
-        retrieve_selected_taxa(
-            project_dir = temp_proj_dir, tax_level = "Species",
-            CS_A = "auto", reads_min_A = "auto",
-            CS_B = "auto", reads_min_B = "auto",
-            CS_E = "auto", reads_min_E = "auto",
-            CS_V = "auto", reads_min_V = "auto"
+    # Fully data-driven: auto CS + auto reads for every domain. In the example
+    # data viral species are only detected at CS 0 and 0.2 (too few points for
+    # a Stability Index), so the Viruses fallback must be reported.
+    expect_warning(
+        expect_message(
+            retrieve_selected_taxa(
+                project_dir = temp_proj_dir, tax_level = "Species",
+                CS_A = "auto", reads_min_A = "auto",
+                CS_B = "auto", reads_min_B = "auto",
+                CS_E = "auto", reads_min_E = "auto",
+                CS_V = "auto", reads_min_V = "auto"
+            ),
+            "SUCCESS: 004_final_mosaic completed"
         ),
-        "SUCCESS: 004_final_mosaic completed"
+        "SAMPLE01/Viruses: no auto CS"
     )
     out_dir <- file.path(temp_proj_dir, "004_final_mosaic")
     expect_true(file.exists(

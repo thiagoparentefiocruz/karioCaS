@@ -129,6 +129,8 @@ retention$plots[[1]]
 
 Detailed per-sample panels (all ranks, taxa versus reads) are produced on request with `detail_samples = "all"` or a list of sample names.
 
+A domain needs a decay curve with at least three CS values to be assessed. In the example data, viral species are detected only at CS 0 (16 species) and CS 0.2 (one species), so no Stability Index is reported for Viruses. If `CS_V = "auto"` were requested in the next step, CS 0 would be used for Viruses and a warning would say so; the example below therefore sets the viral thresholds manually.
+
 ## Minimum reads: saturation analysis
 
 Low-count taxa are a second source of false positives. `reads_per_taxa()` raises a minimum-read cutoff step by step (1, 2, 3, 4, 5, 7, 10, then log-spaced values up to the largest count) and counts how many taxa at `analysis_level` still have at least that many reads, at each CS. The elbow of this saturation curve, located with the same engine on a log10 read axis, is the optimal minimum number of reads for the domain at that CS.

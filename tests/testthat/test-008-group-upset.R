@@ -56,10 +56,14 @@ test_that("group_upset(CS = ...) builds membership with Core/Unique categories",
 test_that("group_upset default reads the final mosaic", {
     proj <- .kcs_setup_two_sample_proj()
     suppressMessages(taxa_retention(project_dir = proj, tax_level = "Species"))
-    suppressMessages(retrieve_selected_taxa(
-        project_dir = proj,
-        CS_A = "auto", CS_B = "auto", CS_E = "auto", CS_V = "auto"
-    ))
+    # Viruses has no SI in the example data -> reported fallback to CS 0
+    expect_warning(
+        suppressMessages(retrieve_selected_taxa(
+            project_dir = proj,
+            CS_A = "auto", CS_B = "auto", CS_E = "auto", CS_V = "auto"
+        )),
+        "Viruses: no auto CS"
+    )
 
     expect_message(
         group_upset(project_dir = proj),
