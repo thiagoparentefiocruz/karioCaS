@@ -277,3 +277,21 @@ print.kariocas_result <- function(x, ...) {
     )
     invisible(NULL)
 }
+
+#' Evaluate an expression, capturing an error instead of raising it
+#' @param expr Expression to evaluate (lazily).
+#' @return A list with \code{value} (or \code{NULL}) and \code{error}
+#'   (the error message, or \code{NULL} on success).
+#' @noRd
+.kcs_try <- function(expr) {
+    tryCatch(
+        list(value = expr, error = NULL),
+        error = function(e) list(value = NULL, error = conditionMessage(e))
+    )
+}
+
+#' Is a scalar a plain non-negative number (e.g. 40, "0.9", "10")?
+#' @noRd
+.kcs_is_number <- function(x) {
+    length(x) == 1 && grepl("^\\s*[0-9]*\\.?[0-9]+\\s*$", as.character(x))
+}

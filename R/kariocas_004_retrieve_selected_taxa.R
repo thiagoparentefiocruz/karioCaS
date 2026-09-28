@@ -22,8 +22,7 @@
                 stop("'", label, "' must be a single value.", call. = FALSE)
             }
             if (tolower(as.character(v)) %in% c("auto", "secondary")) next
-            n <- suppressWarnings(as.numeric(v))
-            if (is.na(n) || n < 0) {
+            if (!.kcs_is_number(v)) {
                 stop(
                     "Invalid '", label, "': ", v,
                     ". Use \"auto\", \"secondary\" or a non-negative number.",
@@ -271,81 +270,100 @@
     log_msg <- setup$log_msg
     log_msg("----------------------------------------------------")
     log_msg("  Sample: ", samp)
-    issues <- character(0)
     samp_cols <- grep(paste0("^", samp, "_CS"), all_cols, value = TRUE)
-    available_suffixes <- stringr::str_remove(samp_cols, paste0("^", samp, "_CS"))
-    taxa_list <- list()
-    for (dom in names(configs)) {
-        cfg <- configs[[dom]]
-        resolved <- .rst_resolve_cs(cfg$val, dom, samp, audit_df, log_msg)
-        if (grepl("Fail", resolved$tag)) {
-            issues <- c(issues, paste0(
-                samp, "/", dom, ": no ", cfg$val, " CS in the SI audit, used CS 0"
-            ))
-        }
-        match_suf <- .rst_match_column(samp, resolved$val, available_suffixes, log_msg)
-        if (is.null(match_suf)) {
-            issues <- c(issues, paste0(
-                samp, "/", dom, ": CS ", resolved$val,
-                " not available, domain skipped"
-            ))
-            next
-        }
-        target_col <- paste0(samp, "_CS", match_suf)
-        reads_res <- .rst_resolve_reads(
-            cfg$min_val, dom, samp, resolved$val, reads_audit, log_msg
+    suffixes <- stringr::str_remove(samp_cols, paste0("^", samp, "_CS"))
+    parts <- lapply(names(configs), function(dom) {
+        .rst_domain_part(
+            samp, dom, configs[[dom]], suffixes, count_matrix, row_meta,
+            audit_df, reads_audit, log_msg
         )
-        if (grepl("none", reads_res$tag)) {
-            issues <- c(issues, paste0(
-                samp, "/", dom, ": no ", cfg$min_val,
-                " minimum reads at CS ", resolved$val, ", used 0"
-            ))
-        }
-        part_df <- .rst_filter_domain(
-            count_matrix, row_meta, target_col, dom, reads_res$val
-        )
-        if (is.null(part_df)) next
-        cs_num <- tryCatch(as.numeric(match_suf), warning = function(w) NA_real_)
-        cs_display <- if (!is.na(cs_num)) cs_num / 100 else 0
-        log_msg(sprintf(
-            "    -> Added %d %s taxa (CS = %.2f %s | min_reads = %g %s)",
-            nrow(part_df), dom, cs_display, resolved$tag,
-            reads_res$val, reads_res$tag
-        ))
-        taxa_list[[dom]] <- dplyr::mutate(
-            part_df,
-            Domain = dom, CS = resolved$val, CS_Source = resolved$tag,
-            Min_Reads = reads_res$val, Min_Reads_Source = reads_res$tag
-        )
-    }
-    if (length(taxa_list) == 0) {
+    })
+    issues <- unlist(lapply(parts, `[[`, "issues"))
+    long_df <- dplyr::bind_rows(lapply(parts, `[[`, "data"))
+    if (nrow(long_df) == 0) {
         log_msg("    -> FAILED: No output generated for ", samp)
         return(list(data = NULL, paths = character(0), issues = issues))
     }
-    long_df <- dplyr::bind_rows(taxa_list)
+    list(
+        data = dplyr::mutate(long_df, sample = samp, .before = 1),
+        paths = .rst_write_mosaic(long_df, samp, setup),
+        issues = issues
+    )
+}
+
+#' Resolve thresholds and select the taxa of one domain in one sample
+#' @return list(data = data.frame or NULL, issues = character).
+#' @noRd
+.rst_domain_part <- function(samp, dom, cfg, suffixes, count_matrix,
+                             row_meta, audit_df, reads_audit, log_msg) {
+    issues <- character(0)
+    resolved <- .rst_resolve_cs(cfg$val, dom, samp, audit_df, log_msg)
+    if (grepl("Fail", resolved$tag)) {
+        issues <- paste0(
+            samp, "/", dom, ": no ", cfg$val, " CS in the SI audit, used CS 0"
+        )
+    }
+    match_suf <- .rst_match_column(samp, resolved$val, suffixes, log_msg)
+    if (is.null(match_suf)) {
+        return(list(data = NULL, issues = c(issues, paste0(
+            samp, "/", dom, ": CS ", resolved$val,
+            " not available, domain skipped"
+        ))))
+    }
+    reads_res <- .rst_resolve_reads(
+        cfg$min_val, dom, samp, resolved$val, reads_audit, log_msg
+    )
+    if (grepl("none", reads_res$tag)) {
+        issues <- c(issues, paste0(
+            samp, "/", dom, ": no ", cfg$min_val,
+            " minimum reads at CS ", resolved$val, ", used 0"
+        ))
+    }
+    part_df <- .rst_filter_domain(
+        count_matrix, row_meta, paste0(samp, "_CS", match_suf), dom,
+        reads_res$val
+    )
+    if (is.null(part_df)) {
+        return(list(data = NULL, issues = issues))
+    }
+    log_msg(sprintf(
+        "    -> Added %d %s taxa (CS = %.2f %s | min_reads = %g %s)",
+        nrow(part_df), dom, resolved$val / 100, resolved$tag,
+        reads_res$val, reads_res$tag
+    ))
+    list(
+        data = dplyr::mutate(
+            part_df,
+            Domain = dom, CS = resolved$val, CS_Source = resolved$tag,
+            Min_Reads = reads_res$val, Min_Reads_Source = reads_res$tag
+        ),
+        issues = issues
+    )
+}
+
+#' Write one sample's mosaic (.mpa + .tsv) when exporting
+#' @return Character vector of written paths (empty if not exporting).
+#' @noRd
+.rst_write_mosaic <- function(long_df, samp, setup) {
+    if (!isTRUE(setup$export)) {
+        return(character(0))
+    }
     final_df <- long_df |>
         dplyr::group_by(.data$Taxonomy) |>
         dplyr::summarise(Counts = sum(.data$Counts), .groups = "drop") |>
         dplyr::rename(!!samp := "Counts")
-    paths <- character(0)
-    if (isTRUE(setup$export)) {
-        base_name <- paste0(samp, "_karioCaS_Mosaic")
-        mpa_dir <- file.path(setup$output_dir, "mpa")
-        tsv_dir <- file.path(setup$output_dir, "tsv")
-        if (!dir.exists(mpa_dir)) dir.create(mpa_dir, recursive = TRUE)
-        if (!dir.exists(tsv_dir)) dir.create(tsv_dir, recursive = TRUE)
-        paths <- c(
-            file.path(mpa_dir, paste0(base_name, ".mpa")),
-            file.path(tsv_dir, paste0(base_name, ".tsv"))
-        )
-        readr::write_delim(final_df, paths[1], delim = "\t")
-        readr::write_tsv(final_df, paths[2])
-        log_msg("    -> GENERATED: mpa/", base_name, ".mpa")
-    }
-    list(
-        data = dplyr::mutate(long_df, sample = samp, .before = 1),
-        paths = paths, issues = issues
+    base_name <- paste0(samp, "_karioCaS_Mosaic")
+    paths <- c(
+        file.path(setup$output_dir, "mpa", paste0(base_name, ".mpa")),
+        file.path(setup$output_dir, "tsv", paste0(base_name, ".tsv"))
     )
+    for (d in dirname(paths)) {
+        if (!dir.exists(d)) dir.create(d, recursive = TRUE)
+    }
+    readr::write_delim(final_df, paths[1], delim = "\t")
+    readr::write_tsv(final_df, paths[2])
+    setup$log_msg("    -> GENERATED: mpa/", base_name, ".mpa")
+    paths
 }
 
 # ==============================================================================

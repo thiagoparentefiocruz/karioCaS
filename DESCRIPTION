@@ -49,6 +49,6 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-biocViews: Metagenomics, Microbiome, Software
+biocViews: Metagenomics, Microbiome, DataImport, Software
 URL: https://github.com/thiagoparentefiocruz/karioCaS
 BugReports: https://github.com/thiagoparentefiocruz/karioCaS/issues

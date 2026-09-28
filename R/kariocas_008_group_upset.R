@@ -169,13 +169,11 @@
         base <- paste0(group, "_", dom, "_", tax_level, "_", label)
         memb <- .gup_membership(binary, samples, group, dom, tax_level)
         membership[[dom]] <- memb
-        up <- tryCatch(
-            .gup_build(binary, samples, tax_level),
-            error = function(e) {
-                failed <<- c(failed, paste0(base, ": ", conditionMessage(e)))
-                NULL
-            }
-        )
+        built <- .kcs_try(.gup_build(binary, samples, tax_level))
+        if (!is.null(built$error)) {
+            failed <- c(failed, paste0(base, ": ", built$error))
+        }
+        up <- built$value
         if (!is.null(grp_dir)) {
             if (!dir.exists(grp_dir)) dir.create(grp_dir, recursive = TRUE)
             tsv <- file.path(grp_dir, paste0(base, "_membership.tsv"))

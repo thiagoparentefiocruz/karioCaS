@@ -89,14 +89,12 @@
             next
         }
         key <- paste0(samp, "_", dom, "_", lvl)
-        up <- tryCatch(
-            .ups_build(mat, upset_cols, lvl),
-            error = function(e) {
-                failed <<- c(failed, paste0(key, ": ", conditionMessage(e)))
-                NULL
-            }
-        )
-        if (is.null(up)) next
+        built <- .kcs_try(.ups_build(mat, upset_cols, lvl))
+        if (!is.null(built$error)) {
+            failed <- c(failed, paste0(key, ": ", built$error))
+            next
+        }
+        up <- built$value
         data[[dom]] <- data.frame(
             sample = samp, Domain = dom, Rank = lvl, mat,
             N_CS = rowSums(mat[, upset_cols, drop = FALSE]),
